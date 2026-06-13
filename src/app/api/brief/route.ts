@@ -1,4 +1,5 @@
 import { getBrief } from "@/lib/harbormaster-service";
+import { syncLiveWorkspace } from "@/lib/sync-live";
 import { cookies } from "next/headers";
 
 export const runtime = "nodejs";
@@ -14,6 +15,8 @@ export async function GET() {
     notionToken: cookieStore.get("harbormaster_notion_token")?.value || "",
     geminiKey: cookieStore.get("harbormaster_gemini_key")?.value || "",
   };
+
+  await syncLiveWorkspace(config);
 
   const brief = await getBrief(config);
   return Response.json(brief);

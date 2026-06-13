@@ -243,6 +243,7 @@ export function HarborMasterApp() {
   const [discordToken, setDiscordToken] = useState("");
   const [discordChannel, setDiscordChannel] = useState("");
   const [notionToken, setNotionToken] = useState("");
+  const [githubUser, setGithubUser] = useState("");
 
   // Testing states
   const [testingConnection, setTestingConnection] = useState(false);
@@ -328,6 +329,7 @@ export function HarborMasterApp() {
     }, {} as Record<string, string>);
 
     const gToken = cookiesObj["harbormaster_github_token"] || "";
+    const gUser = cookiesObj["harbormaster_github_user"] || "";
     const gOwner = cookiesObj["harbormaster_github_owner"] || cookiesObj["harbormaster_github_user"] || "";
     const gRepo = cookiesObj["harbormaster_github_repo"] || "";
     const dToken = cookiesObj["harbormaster_discord_token"] || "";
@@ -339,6 +341,7 @@ export function HarborMasterApp() {
       setGithubToken(gToken);
       setGithubSyncOk(true);
     }
+    if (gUser) setGithubUser(gUser);
     if (gOwner) setGithubOwner(gOwner);
     if (gRepo) setGithubRepo(gRepo);
     if (dToken) {
@@ -361,6 +364,7 @@ export function HarborMasterApp() {
           setGithubToken(data.githubToken);
           setGithubSyncOk(true);
         }
+        if (data.githubUser) setGithubUser(data.githubUser);
         if (data.githubOwner) setGithubOwner(data.githubOwner);
         if (data.githubRepo) setGithubRepo(data.githubRepo);
         if (data.discordToken && data.discordToken !== "••••••••") {
@@ -695,6 +699,7 @@ export function HarborMasterApp() {
         body: JSON.stringify({
           geminiKey,
           githubToken,
+          githubUser,
           githubOwner,
           githubRepo,
           discordToken,
@@ -736,6 +741,7 @@ export function HarborMasterApp() {
         body: JSON.stringify({
           geminiKey,
           githubToken,
+          githubUser,
           githubOwner,
           githubRepo,
           discordToken,
@@ -1494,58 +1500,74 @@ export function HarborMasterApp() {
                         </div>
                         
                         {loadingRepos ? (
-                          <div className="py-2 flex items-center gap-1.5 text-xs text-slate-400 font-mono">
-                            <Loader2 className="size-3.5 animate-spin text-teal-400" /> Loading repositories...
-                          </div>
+                        <div className="py-2 flex items-center gap-1.5 text-xs text-slate-400 font-mono">
+                        <Loader2 className="size-3.5 animate-spin text-teal-400" /> Loading repositories...
+                        </div>
                         ) : userRepos.length > 0 ? (
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-mono text-slate-400 flex justify-between">
-                              <span>SELECT REPOSITORY</span>
-                              <button 
-                                type="button"
-                                className="text-[9px] text-teal-400 underline hover:text-teal-300 font-sans"
-                                onClick={() => setUserRepos([])}
-                              >
-                                Enter manually
-                              </button>
-                            </label>
-                            <select
-                              className="w-full bg-slate-950 border border-slate-900 rounded-lg p-2 text-xs text-white focus-visible:ring-teal-500/20 h-9"
-                              value={githubOwner && githubRepo ? `${githubOwner}/${githubRepo}` : ""}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                if (val) {
-                                  const [owner, repo] = val.split("/");
-                                  setGithubOwner(owner);
-                                  setGithubRepo(repo);
-                                }
-                              }}
-                            >
-                              <option value="">-- Choose a Repository --</option>
-                              {userRepos.map((r) => (
-                                <option key={r.fullName} value={r.fullName}>
-                                  {r.fullName}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
+                        <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                        <label className="text-[10px] font-mono text-slate-400">SELECT REPOSITORIES (CHOOSE MULTIPLE)</label>
+                        <button 
+                        type="button"
+                        className="text-[9px] text-teal-400 underline hover:text-teal-300 font-sans"
+                        onClick={() => setUserRepos([])}
+                        >
+                        Enter manually
+                        </button>
+                        </div>
+                        <div className="max-h-40 overflow-y-auto border border-slate-900 bg-slate-950 rounded-lg p-2.5 space-y-1.5 scrollbar-thin text-left">
+                        {userRepos.map((r) => {
+                        const currentRepos = githubRepo.split(",").map(x => x.trim()).filter(Boolean);
+                        const isChecked = currentRepos.includes(r.fullName) || currentRepos.includes(r.name);
+                        return (
+                        <label key={r.fullName} className="flex items-center gap-2.5 text-xs text-slate-300 hover:text-white cursor-pointer select-none py-1">
+                        <input
+                        type="checkbox"
+                        checked={isChecked}
+                        className="accent-teal-500 rounded border-slate-800 bg-slate-950 size-3.5"
+                        onChange={(e) => {
+                        let updatedRepos = [...currentRepos];
+                        if (e.target.checked) {
+                        if (!updatedRepos.includes(r.fullName)) {
+                        updatedRepos.push(r.fullName);
+                        }
+                        } else {
+                        updatedRepos = updatedRepos.filter(x => x !== r.fullName && x !== r.name);
+                        }
+                        setGithubRepo(updatedRepos.join(", "));
+                        if (updatedRepos.length > 0) {
+                        const firstRepo = updatedRepos[0];
+                        if (firstRepo.includes("/")) {
+                        setGithubOwner(firstRepo.split("/")[0]);
+                        } else {
+                        setGithubOwner(r.owner || "");
+                        }
+                        }
+                        }}
+                        />
+                        <span className="truncate">{r.fullName}</span>
+                        </label>
+                        );
+                        })}
+                        </div>
+                        </div>
                         ) : (
-                          <>
-                            <div className="space-y-1">
-                              <label className="text-[10px] font-mono text-slate-400 flex justify-between">
-                                <span>OWNER / ORGANIZATION</span>
-                                <span className="text-[9px] text-slate-500 lowercase">e.g. vercel</span>
-                              </label>
-                              <Input placeholder="e.g., vercel" value={githubOwner} onChange={(e) => setGithubOwner(e.target.value)} className="bg-slate-950 border-slate-900 text-xs focus-visible:ring-teal-500/20 text-white placeholder:text-slate-600" />
-                            </div>
-                            <div className="space-y-1">
-                              <label className="text-[10px] font-mono text-slate-400 flex justify-between">
-                                <span>REPOSITORY NAME</span>
-                                <span className="text-[9px] text-slate-500 lowercase">e.g. next.js</span>
-                              </label>
-                              <Input placeholder="e.g., next.js" value={githubRepo} onChange={(e) => setGithubRepo(e.target.value)} className="bg-slate-950 border-slate-900 text-xs focus-visible:ring-teal-500/20 text-white placeholder:text-slate-600" />
-                            </div>
-                          </>
+                        <>
+                        <div className="space-y-1">
+                        <label className="text-[10px] font-mono text-slate-400 flex justify-between">
+                        <span>OWNER / ORGANIZATION</span>
+                        <span className="text-[9px] text-slate-500 lowercase">e.g. vercel</span>
+                        </label>
+                        <Input placeholder="e.g., vercel" value={githubOwner} onChange={(e) => setGithubOwner(e.target.value)} className="bg-slate-950 border-slate-900 text-xs focus-visible:ring-teal-500/20 text-white placeholder:text-slate-600" />
+                        </div>
+                        <div className="space-y-1">
+                        <label className="text-[10px] font-mono text-slate-400 flex justify-between">
+                        <span>REPOSITORY NAMES (COMMA SEPARATED)</span>
+                        <span className="text-[9px] text-slate-500 lowercase">e.g. next.js, hyper</span>
+                        </label>
+                        <Input placeholder="e.g., next.js, hyper" value={githubRepo} onChange={(e) => setGithubRepo(e.target.value)} className="bg-slate-950 border-slate-900 text-xs focus-visible:ring-teal-500/20 text-white placeholder:text-slate-600" />
+                        </div>
+                        </>
                         )}
                       </div>
                     </div>
@@ -1644,8 +1666,8 @@ export function HarborMasterApp() {
                           <p className="text-[9px] text-slate-500 mt-1 leading-normal font-sans">Configure a Discord Bot token with message reading scopes.</p>
                         </div>
                         <div className="space-y-1">
-                          <label className="text-[10px] font-mono text-slate-400">DISCORD CHANNEL ID</label>
-                          <Input placeholder="e.g., 104239840239480" value={discordChannel} onChange={(e) => setDiscordChannel(e.target.value)} className="bg-slate-950 border-slate-900 text-xs focus-visible:ring-teal-500/20 text-white placeholder:text-slate-600" />
+                          <label className="text-[10px] font-mono text-slate-400">DISCORD CHANNEL IDS (COMMA-SEPARATED)</label>
+                          <Input placeholder="e.g., 104239840239480, 104239840239481" value={discordChannel} onChange={(e) => setDiscordChannel(e.target.value)} className="bg-slate-950 border-slate-900 text-xs focus-visible:ring-teal-500/20 text-white placeholder:text-slate-600" />
                         </div>
                       </div>
                     </div>
@@ -2027,11 +2049,11 @@ export function HarborMasterApp() {
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="relative size-8 rounded-full bg-[#181c2d] flex items-center justify-center border border-white/[0.08] shrink-0 overflow-hidden shadow-inner">
                   <div className="absolute inset-0 bg-gradient-to-tr from-teal-500/10 to-transparent" />
-                  <span className="text-[10px] font-bold text-teal-400 font-heading">AM</span>
+                  <span className="text-[10px] font-bold text-teal-400 font-heading">{(githubUser || "DM").slice(0, 2).toUpperCase()}</span>
                   <div className="absolute bottom-0 right-0 size-2 bg-emerald-500 rounded-full border border-[#06080f]" title="Coral DB Connected" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[11px] font-semibold text-white truncate">Alex Maintainer</p>
+                  <p className="text-[11px] font-semibold text-white truncate">{githubUser || "Developer Maintainer"}</p>
                   <div className="flex items-center gap-1">
                     <span className="size-1 rounded-full bg-emerald-500/85" />
                     <span className="text-[9px] text-slate-400 font-mono">Ecosystem Active</span>
@@ -2153,10 +2175,16 @@ export function HarborMasterApp() {
                       <div className="space-y-1.5">
                         <span className="text-[9.5px] font-mono text-teal-400 tracking-widest uppercase font-semibold">Ecosystem Summary</span>
                         <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-tight font-heading">
-                          Good morning, Alex.
+                          Good morning, {githubUser || "Developer"}.
                         </h2>
                         <p className="text-slate-300 text-sm max-w-xl leading-relaxed">
-                          There are <span className="text-teal-400 font-semibold">3 priority issues</span> demanding your attention across connected repositories and community channels.
+                          {brief.actions.length > 0 ? (
+                            <>There are <span className="text-teal-400 font-semibold">{brief.actions.length} priority issue{brief.actions.length !== 1 ? "s" : ""}</span> demanding your attention across connected repositories and community channels.</>
+                          ) : brief.notice ? (
+                            <span className="text-slate-400">{brief.notice}</span>
+                          ) : (
+                            <>Connect your GitHub, Discord, and Notion to begin receiving prioritized ecosystem actions.</>
+                          )}
                         </p>
                       </div>
 
@@ -2168,7 +2196,7 @@ export function HarborMasterApp() {
                               <span className="text-[9px] font-mono font-bold tracking-wider text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-full uppercase">
                                 Critical Task
                               </span>
-                              <span className="text-[10px] text-slate-500 font-mono">1.4 release blocker</span>
+                              <span className="text-[10px] text-slate-500 font-mono">Priority action</span>
                             </div>
                             <h3 className="text-sm font-semibold text-slate-100 leading-snug">{topAction.title}</h3>
                             <p className="text-xs text-slate-400 max-w-2xl leading-relaxed">{topAction.summary}</p>
@@ -2192,7 +2220,7 @@ export function HarborMasterApp() {
                       <CardContent className="p-4 space-y-4 min-h-[220px]">
                         {messages.map((message, i) => (
                           <div key={i} className={cn("p-3 rounded-lg border text-xs leading-relaxed max-w-3xl", message.role === "assistant" ? "bg-slate-900/20 border-white/[0.03]" : "ml-auto bg-teal-500/5 border-teal-500/20 text-teal-200")}>
-                            <p className="font-mono text-[9px] text-slate-500 mb-1.5 uppercase">{message.role === "assistant" ? "HarborMaster AI" : "Alex (Maintainer)"}</p>
+                            <p className="font-mono text-[9px] text-slate-500 mb-1.5 uppercase">{message.role === "assistant" ? "HarborMaster AI" : `${githubUser || "Developer"} (Maintainer)`}</p>
                             <p>{message.content}</p>
 
                             {message.evidence?.length ? (
@@ -2341,7 +2369,7 @@ export function HarborMasterApp() {
                   <div className="space-y-4">
                     <div>
                       <h2 className="text-base font-semibold text-white font-heading">Release Watch Timeline</h2>
-                      <p className="text-xs text-slate-400">Blocked branches, failing CI builds, and deployment risks tagged against v1.4.</p>
+                      <p className="text-xs text-slate-400">Blocked branches, failing CI builds, and deployment risks detected from your live connected repositories.</p>
                     </div>
 
                     <div className="rounded-xl border border-white/[0.04] bg-[#0E1326]/40 backdrop-blur-md p-6 relative">
@@ -2349,48 +2377,49 @@ export function HarborMasterApp() {
                       <div className="absolute left-9 top-6 bottom-6 w-0.5 bg-slate-800" />
 
                       <div className="space-y-8 relative">
-                        {[
-                          { title: "Authentication Flow Blocker", status: "BLOCKED", source: "GitHub", desc: "Issue #184: OAuth retry count exhaustion fails to catch silent timeouts.", time: "2 hours ago", type: "error" },
-                          { title: "PR #184 CI Compilation", status: "FAILING", source: "GitHub", desc: "Build action check failed on verify-deployment check in nextjs-turbopack bundle.", time: "4 hours ago", type: "error" },
-                          { title: "Documentation updates verification", status: "PENDING", source: "Notion", desc: "Wiki sync lists 4 release FAQ paragraphs needing updates before publish.", time: "Yesterday", type: "warning" },
-                          { title: "Community Signoff Verification", status: "SUCCESS", source: "Discord", desc: "Maintainers on #dev channel approved the staging deployment tests.", time: "2 days ago", type: "success" }
-                        ].map((node, i) => (
-                          <div key={i} className="flex gap-6 items-start">
-                            {/* Circle bullet node */}
-                            <div className={cn(
-                              "size-6 rounded-full border flex items-center justify-center shrink-0 z-10",
-                              node.type === "error" ? "border-red-500 bg-[#0B1020] text-red-400 shadow-[0_0_8px_rgba(239,68,68,0.2)]" :
-                                node.type === "warning" ? "border-amber-500 bg-[#0B1020] text-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.2)]" :
-                                  "border-emerald-500 bg-[#0B1020] text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.2)]"
-                            )}>
-                              {node.type === "success" ? <CheckCircle2 className="size-3.5" /> : <AlertTriangle className="size-3.5" />}
-                            </div>
+                        {brief.risks.length > 0 ? (
+                          brief.risks.map((node, i) => (
+                            <div key={node.id} className="flex gap-6 items-start">
+                              {/* Circle bullet node */}
+                              <div className={cn(
+                                "size-6 rounded-full border flex items-center justify-center shrink-0 z-10",
+                                node.score > 80 ? "border-red-500 bg-[#0B1020] text-red-400 shadow-[0_0_8px_rgba(239,68,68,0.2)]" :
+                                  "border-amber-500 bg-[#0B1020] text-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.2)]"
+                              )}>
+                                <AlertTriangle className="size-3.5" />
+                              </div>
 
-                            <div className="space-y-1 flex-1">
-                              <div className="flex justify-between items-center text-xs">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-semibold text-white text-xs">{node.title}</span>
-                                  <Badge variant="outline" className={cn(
-                                    "text-[8px] font-mono font-bold",
-                                    node.type === "error" ? "border-red-500/20 bg-red-500/5 text-red-400" :
-                                      node.type === "warning" ? "border-amber-500/20 bg-amber-500/5 text-amber-400" :
-                                        "border-emerald-500/20 bg-emerald-500/5 text-emerald-400"
-                                  )}>
-                                    {node.status}
-                                  </Badge>
+                              <div className="space-y-1 flex-1">
+                                <div className="flex justify-between items-center text-xs">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-semibold text-white text-xs">{node.linkedWork}: {node.blocker}</span>
+                                    <Badge variant="outline" className={cn(
+                                      "text-[8px] font-mono font-bold",
+                                      node.score > 80 ? "border-red-500/20 bg-red-500/5 text-red-400" :
+                                        "border-amber-500/20 bg-amber-500/5 text-amber-400"
+                                    )}>
+                                      {node.score > 80 ? "BLOCKED" : "PENDING"}
+                                    </Badge>
+                                  </div>
+                                  <span className="text-[10px] text-slate-500 font-mono">Live</span>
                                 </div>
-                                <span className="text-[10px] text-slate-500 font-mono">{node.time}</span>
-                              </div>
-                              <p className="text-[11px] text-slate-400 leading-relaxed">{node.desc}</p>
-                              <div className="flex items-center gap-1.5 mt-1">
-                                <span className="text-[9px] text-slate-550 font-mono font-sans">Source:</span>
-                                <Badge variant="outline" className={cn("text-[8px] font-mono py-0 px-1.5 h-4.5", sourceTone[node.source] || "border-slate-800 text-slate-500")}>
-                                  {node.source}
-                                </Badge>
+                                <p className="text-[11px] text-slate-400 leading-relaxed">{node.impact}</p>
+                                <div className="flex items-center gap-1.5 mt-1">
+                                  <span className="text-[9px] text-slate-550 font-mono font-sans">Source:</span>
+                                  {node.sources.map(src => (
+                                    <Badge key={src} variant="outline" className={cn("text-[8px] font-mono py-0 px-1.5 h-4.5", sourceTone[src] || "border-slate-800 text-slate-500")}>
+                                      {src}
+                                    </Badge>
+                                  ))}
+                                </div>
                               </div>
                             </div>
+                          ))
+                        ) : (
+                          <div className="text-center py-8 text-xs text-slate-500 font-mono">
+                            No active release risks found in the live database.
                           </div>
-                        ))}
+                        )}
                       </div>
                     </div>
                   </div>
@@ -2405,33 +2434,35 @@ export function HarborMasterApp() {
                     </div>
 
                     <div className="grid gap-4 md:grid-cols-2">
-                      {[
-                        { title: "OAuth Timeout Issues", count: 8, source: "Discord", sentiment: "Negative", excerpt: "Users reporting 'Token expired' redirect loops immediately after auth click." },
-                        { title: "PR #184 CI pipeline failures", count: 4, source: "GitHub Comments", sentiment: "Warning", excerpt: "CI failed on verify-deployment task in next-turbopack check." },
-                        { title: "Notion Roadmap Updates", count: 2, source: "Notion", sentiment: "Neutral", excerpt: "FAQ roadmap docs sync completed successfully with 2 pending edits." },
-                      ].map((item, i) => (
-                        <Card key={i} className="border-white/[0.04] bg-[#0E1326]/40 backdrop-blur-md p-4 space-y-3">
-                          <div className="flex justify-between items-center">
-                            <Badge variant="outline" className={cn(
-                              "text-[8px] font-mono",
-                              item.sentiment === "Negative" ? "border-red-500/20 text-red-400" :
-                                item.sentiment === "Warning" ? "border-amber-500/20 text-amber-400" :
-                                  "border-slate-800 text-slate-500"
-                            )}>
-                              {item.sentiment} Sentiment
-                            </Badge>
-                            <span className="text-[10px] font-mono text-slate-500">{item.count} occurrences</span>
-                          </div>
-                          <div>
-                            <h3 className="text-xs font-semibold text-white leading-normal">{item.title}</h3>
-                            <p className="text-[10px] text-slate-400 leading-relaxed mt-1 italic">"{item.excerpt}"</p>
-                          </div>
-                          <div className="flex items-center justify-between text-[9px] font-mono text-slate-500 pt-2 border-t border-white/[0.03]">
-                            <span>PLATFORM: {item.source.toUpperCase()}</span>
-                            <span className="text-teal-400">CLUSTER ACTIVE</span>
-                          </div>
-                        </Card>
-                      ))}
+                      {brief.communitySignals && brief.communitySignals.length > 0 ? (
+                        brief.communitySignals.map((item, i) => (
+                          <Card key={i} className="border-white/[0.04] bg-[#0E1326]/40 backdrop-blur-md p-4 space-y-3">
+                            <div className="flex justify-between items-center">
+                              <Badge variant="outline" className={cn(
+                                "text-[8px] font-mono",
+                                item.sentiment === "Negative" ? "border-red-500/20 text-red-400" :
+                                  item.sentiment === "Warning" ? "border-amber-500/20 text-amber-400" :
+                                    "border-slate-800 text-slate-500"
+                              )}>
+                                {item.sentiment} Sentiment
+                              </Badge>
+                              <span className="text-[10px] font-mono text-slate-500">By @{item.author}</span>
+                            </div>
+                            <div>
+                              <h3 className="text-xs font-semibold text-white leading-normal">{item.title}</h3>
+                              <p className="text-[10px] text-slate-400 leading-relaxed mt-1 italic">"{item.excerpt}"</p>
+                            </div>
+                            <div className="flex items-center justify-between text-[9px] font-mono text-slate-500 pt-2 border-t border-white/[0.03]">
+                              <span>PLATFORM: {item.source.toUpperCase()}</span>
+                              <span className="text-teal-400">SIGNAL ACTIVE</span>
+                            </div>
+                          </Card>
+                        ))
+                      ) : (
+                        <div className="col-span-2 text-center py-12 border border-dashed border-white/[0.04] rounded-xl text-xs text-slate-500 font-mono">
+                          No live community signals found in the database.
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

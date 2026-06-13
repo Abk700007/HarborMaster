@@ -36,6 +36,16 @@ yarn-error.log*
 
 # local Coral generated source specs
 .coral/generated/
+.coral/live-data/
+.coral/telemetry/
+.coral/.lock
+
+# Coral binary (too large for git)
+/bin/coral.exe
+/bin/coral
+
+# harbormaster config (contains credentials - never commit)
+harbormaster.config.json
 
 # vercel
 .vercel

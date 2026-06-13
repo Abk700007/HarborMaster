@@ -49,6 +49,7 @@ export type BriefResponse = {
   sourceStatuses: SourceStatus[];
   actions: ActionItem[];
   risks: RiskRow[];
+  communitySignals?: any[];
   queryCount: number;
   cacheHitRate: number;
   latencyMs: number;

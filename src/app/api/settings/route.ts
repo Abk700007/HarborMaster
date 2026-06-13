@@ -4,7 +4,8 @@ import path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { cookies } from "next/headers";
-import { resetSourcesRegistered } from "@/lib/coral";
+import { resetSourcesRegistered, getCoralEnv } from "@/lib/coral";
+import { syncLiveWorkspace } from "@/lib/sync-live";
 
 const execFileAsync = promisify(execFile);
 
@@ -17,6 +18,7 @@ export async function GET() {
     const config = {
       geminiKey: cookieStore.get("harbormaster_gemini_key")?.value || "",
       githubToken: cookieStore.get("harbormaster_github_token")?.value || "",
+      githubUser: cookieStore.get("harbormaster_github_user")?.value || "",
       githubOwner: cookieStore.get("harbormaster_github_owner")?.value || "",
       githubRepo: cookieStore.get("harbormaster_github_repo")?.value || "",
       discordToken: cookieStore.get("harbormaster_discord_token")?.value || "",
@@ -29,6 +31,7 @@ export async function GET() {
       return NextResponse.json({
         geminiKey: config.geminiKey ? "••••••••" : "",
         githubToken: config.githubToken ? "••••••••" : "",
+        githubUser: config.githubUser,
         githubOwner: config.githubOwner,
         githubRepo: config.githubRepo,
         discordToken: config.discordToken ? "••••••••" : "",
@@ -49,6 +52,7 @@ export async function GET() {
     return NextResponse.json({
       geminiKey: fileConfig.geminiKey ? "••••••••" : "",
       githubToken: fileConfig.githubToken ? "••••••••" : "",
+      githubUser: fileConfig.githubUser || "",
       githubOwner: fileConfig.githubOwner || "",
       githubRepo: fileConfig.githubRepo || "",
       discordToken: fileConfig.discordToken ? "••••••••" : "",
@@ -95,6 +99,7 @@ export async function POST(request: Request) {
       ...existing,
       geminiKey: body.geminiKey === "••••••••" ? existing.geminiKey : body.geminiKey || "",
       githubToken: body.githubToken === "••••••••" ? existing.githubToken : body.githubToken || "",
+      githubUser: body.githubUser || existing.githubUser || "",
       githubOwner: body.githubOwner || "",
       githubRepo: body.githubRepo || "",
       discordToken: body.discordToken === "••••••••" ? existing.discordToken : body.discordToken || "",
@@ -107,6 +112,7 @@ export async function POST(request: Request) {
     const cookieOpts = { path: "/", secure: process.env.NODE_ENV === "production", maxAge: oneMonth };
     
     if (newConfig.githubToken) cookieStore.set("harbormaster_github_token", newConfig.githubToken, cookieOpts);
+    if (newConfig.githubUser) cookieStore.set("harbormaster_github_user", newConfig.githubUser, cookieOpts);
     if (newConfig.githubOwner) cookieStore.set("harbormaster_github_owner", newConfig.githubOwner, cookieOpts);
     if (newConfig.githubRepo) cookieStore.set("harbormaster_github_repo", newConfig.githubRepo, cookieOpts);
     if (newConfig.discordToken) cookieStore.set("harbormaster_discord_token", newConfig.discordToken, cookieOpts);
@@ -130,25 +136,21 @@ export async function POST(request: Request) {
 
     // Dynamically attempt to register Coral sources
     try {
-      const env = { 
-        ...process.env, 
-        CORAL_CONFIG_DIR: process.env.VERCEL ? "/tmp/coral-config" : path.join(process.cwd(), ".coral"),
-        GITHUB_TOKEN: newConfig.githubToken, 
-        GITHUB_OWNER: newConfig.githubOwner, 
-        GITHUB_REPO: newConfig.githubRepo, 
-        DISCORD_BOT_TOKEN: newConfig.discordToken, 
-        DISCORD_CHANNEL_ID: newConfig.discordChannel,
-        NOTION_TOKEN: newConfig.notionToken
-      };
+      await syncLiveWorkspace(newConfig);
 
+      const env = getCoralEnv(newConfig);
+
+      const isWindows = process.platform === "win32";
       let coralBin = process.env.CORAL_BIN ?? "coral";
-      const localBin = path.join(process.cwd(), "bin", "coral");
+      const localBin = path.join(process.cwd(), "bin", isWindows ? "coral.exe" : "coral");
       try {
         await fs.access(localBin);
         coralBin = localBin;
-        try {
-          await fs.chmod(coralBin, 0o755);
-        } catch (e) {}
+        if (!isWindows) {
+          try {
+            await fs.chmod(coralBin, 0o755);
+          } catch (e) {}
+        }
       } catch (e) {}
 
       if (newConfig.githubToken) {

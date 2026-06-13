@@ -50,17 +50,18 @@ export async function POST(request: Request) {
     if (sourceType === "github") {
       let token = payload.githubToken;
       const owner = payload.githubOwner;
-      const repo = payload.githubRepo;
+      const repos = (payload.githubRepo || "").split(",").map((r: string) => r.trim()).filter(Boolean);
 
       if (token === "••••••••") {
         token = await getStoredSecret("githubToken");
       }
 
-      if (!token || !owner || !repo) {
-        return NextResponse.json({ ok: false, error: "Missing token, owner, or repository name" });
+      if (!token) {
+        return NextResponse.json({ ok: false, error: "Missing GitHub Personal Access Token" });
       }
 
-      const res = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
+      // Always validate the token itself first
+      const userRes = await fetch("https://api.github.com/user", {
         headers: {
           Authorization: `Bearer ${token}`,
           Accept: "application/vnd.github+json",
@@ -69,27 +70,58 @@ export async function POST(request: Request) {
         },
       });
 
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        return NextResponse.json({ ok: false, error: err.message || `GitHub error: ${res.statusText}` });
+      if (!userRes.ok) {
+        return NextResponse.json({ ok: false, error: "Invalid GitHub token — authentication failed." });
       }
 
-      return NextResponse.json({ ok: true, message: `Successfully connected to repository ${owner}/${repo}!` });
+      const userData = await userRes.json();
+      const authenticatedUser = userData.login || owner || "user";
+
+      // If no repos specified, just confirm token is valid
+      if (!owner || repos.length === 0) {
+        return NextResponse.json({ ok: true, message: `GitHub token valid for @${authenticatedUser}` });
+      }
+
+      // Check the first repo to validate access
+      const firstRepo = repos[0];
+      const fullRepo = firstRepo.includes("/") ? firstRepo : `${owner}/${firstRepo}`;
+
+      const repoRes = await fetch(`https://api.github.com/repos/${fullRepo}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/vnd.github+json",
+          "X-GitHub-Api-Version": "2022-11-28",
+          "User-Agent": "HarborMaster-Test",
+        },
+      });
+
+      if (!repoRes.ok) {
+        const err = await repoRes.json().catch(() => ({}));
+        return NextResponse.json({ ok: false, error: err.message || `Repository not found or no access: ${fullRepo}` });
+      }
+
+      const repoCount = repos.length;
+      return NextResponse.json({ ok: true, message: `Connected as @${authenticatedUser} — ${repoCount} repo${repoCount > 1 ? "s" : ""} selected!` });
     }
 
     if (sourceType === "discord") {
       let token = payload.discordToken;
-      const channelId = payload.discordChannel;
+      const channelIds = (payload.discordChannel || "").split(",").map((c: string) => c.trim()).filter(Boolean);
 
       if (token === "••••••••") {
         token = await getStoredSecret("discordToken");
       }
 
-      if (!token || !channelId) {
-        return NextResponse.json({ ok: false, error: "Missing bot token or channel ID" });
+      if (!token) {
+        return NextResponse.json({ ok: false, error: "Missing Discord bot token" });
+      }
+      if (channelIds.length === 0) {
+        return NextResponse.json({ ok: false, error: "Please enter at least one Discord channel ID" });
       }
 
-      const res = await fetch(`https://discord.com/api/v10/channels/${channelId}`, {
+      // Test the first channel ID
+      const firstChannel = channelIds[0];
+      const res = await fetch(`https://discord.com/api/v10/channels/${firstChannel}`, {
         headers: {
           Authorization: `Bot ${token}`,
           Accept: "application/json",
@@ -102,9 +134,10 @@ export async function POST(request: Request) {
       }
 
       const data = await res.json();
+      const channelCount = channelIds.length;
       return NextResponse.json({
         ok: true,
-        message: `Successfully connected to channel #${data.name || channelId}!`,
+        message: `Connected to #${data.name || firstChannel}${channelCount > 1 ? ` + ${channelCount - 1} more channel${channelCount > 2 ? "s" : ""}` : ""}!`,
       });
     }
 

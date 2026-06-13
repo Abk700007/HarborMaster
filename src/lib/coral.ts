@@ -9,10 +9,15 @@ export type CoralResult<T> =
   | { ok: true; rows: T[]; durationMs: number }
   | { ok: false; error: string; durationMs: number };
 
+export const DATA_DIR = process.env.VERCEL ? "/tmp/harbormaster-data" : path.join(process.cwd(), ".coral", "live-data");
+
 export function getCoralEnv(config: any = {}): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = {
     ...process.env,
     CORAL_CONFIG_DIR: process.env.VERCEL ? "/tmp/coral-config" : path.join(process.cwd(), ".coral"),
+    GITHUB_DATA_DIR: DATA_DIR,
+    DISCORD_DATA_DIR: DATA_DIR,
+    NOTION_DATA_DIR: DATA_DIR,
   };
 
   if (config.githubToken && config.githubToken !== "••••••••") {
@@ -42,14 +47,17 @@ export async function ensureCoralSources(config: any): Promise<void> {
 
   const env = getCoralEnv(config);
   
+  const isWindows = process.platform === "win32";
   let coralBin = process.env.CORAL_BIN ?? "coral";
-  const localBin = path.join(process.cwd(), "bin", "coral");
+  const localBin = path.join(process.cwd(), "bin", isWindows ? "coral.exe" : "coral");
   if (fs.existsSync(localBin)) {
     coralBin = localBin;
-    try {
-      fs.chmodSync(coralBin, 0o755);
-    } catch (e) {
-      console.warn("Failed to chmod Coral binary:", e);
+    if (!isWindows) {
+      try {
+        fs.chmodSync(coralBin, 0o755);
+      } catch (e) {
+        console.warn("Failed to chmod Coral binary:", e);
+      }
     }
   }
 
@@ -103,13 +111,16 @@ export async function ensureCoralSources(config: any): Promise<void> {
 export async function runCoralSql<T>(sql: string, config: any = {}): Promise<CoralResult<T>> {
   const started = Date.now();
   try {
+    const isWindows = process.platform === "win32";
     let coralBin = process.env.CORAL_BIN ?? "coral";
-    const localBin = path.join(process.cwd(), "bin", "coral");
+    const localBin = path.join(process.cwd(), "bin", isWindows ? "coral.exe" : "coral");
     if (fs.existsSync(localBin)) {
       coralBin = localBin;
-      try {
-        fs.chmodSync(coralBin, 0o755);
-      } catch (e) {}
+      if (!isWindows) {
+        try {
+          fs.chmodSync(coralBin, 0o755);
+        } catch (e) {}
+      }
     }
 
     // Ensure configured sources are registered
@@ -145,13 +156,16 @@ export async function runCoralSql<T>(sql: string, config: any = {}): Promise<Cor
 export async function listCoralSources(config: any = {}): Promise<CoralResult<{ raw: string }>> {
   const started = Date.now();
   try {
+    const isWindows = process.platform === "win32";
     let coralBin = process.env.CORAL_BIN ?? "coral";
-    const localBin = path.join(process.cwd(), "bin", "coral");
+    const localBin = path.join(process.cwd(), "bin", isWindows ? "coral.exe" : "coral");
     if (fs.existsSync(localBin)) {
       coralBin = localBin;
-      try {
-        fs.chmodSync(coralBin, 0o755);
-      } catch (e) {}
+      if (!isWindows) {
+        try {
+          fs.chmodSync(coralBin, 0o755);
+        } catch (e) {}
+      }
     }
 
     const env = getCoralEnv(config);

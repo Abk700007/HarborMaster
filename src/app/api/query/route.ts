@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { runCoralSql } from "@/lib/coral";
+import { syncLiveWorkspace } from "@/lib/sync-live";
 import { cookies } from "next/headers";
 
 // Simple server-side set to track executed queries and simulate schema/result caching
@@ -24,6 +25,8 @@ export async function POST(request: Request) {
       notionToken: cookieStore.get("harbormaster_notion_token")?.value || "",
       geminiKey: cookieStore.get("harbormaster_gemini_key")?.value || "",
     };
+
+    await syncLiveWorkspace(config);
 
     const normalizedSql = sql.trim().toLowerCase();
     const isCached = queryCache.has(normalizedSql);

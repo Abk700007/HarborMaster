@@ -1,46 +1,20 @@
+# HarborMaster Live Discord Source Spec (JSONL Backend)
 name: discord
 version: 0.1.0
 dsl_version: 3
-backend: http
+backend: jsonl
 test_queries:
-  - SELECT id, content, author__username FROM discord.messages LIMIT 1
+  - SELECT id, content FROM discord.messages LIMIT 1
 inputs:
-  DISCORD_API_BASE:
+  DISCORD_DATA_DIR:
     kind: variable
-    default: https://discord.com/api/v10
-    hint: Discord API base URL.
-  DISCORD_CHANNEL_ID:
-    kind: variable
-    hint: Text channel ID to expose as discord.messages.
-  DISCORD_BOT_TOKEN:
-    kind: secret
-    hint: Bot token with View Channel and Read Message History permissions.
-base_url: "{{input.DISCORD_API_BASE}}"
-auth:
-  type: HeaderAuth
-  headers:
-    - name: Authorization
-      from: template
-      template: Bot {{input.DISCORD_BOT_TOKEN}}
-request_headers:
-  - name: Accept
-    from: literal
-    value: application/json
-rate_limit:
-  retry_after_header: Retry-After
+    hint: Local directory containing live discord jsonl data.
 tables:
   - name: messages
-    description: Recent Discord messages from a configured channel.
-    request:
-      method: GET
-      path: /channels/{{input.DISCORD_CHANNEL_ID}}/messages
-      query:
-        - name: limit
-          from: literal
-          value: 50
-    response:
-      row_strategy: direct
-      allow_404_empty: false
+    description: Live Discord messages from community channels.
+    source:
+      location: "{{input.DISCORD_DATA_DIR}}/discord/"
+      glob: "*.jsonl"
     columns:
       - name: id
         type: Utf8
@@ -55,28 +29,10 @@ tables:
           input: iso8601
           expr:
             kind: path
-            path:
-              - timestamp
+            path: [timestamp]
       - name: author__id
         type: Utf8
-        expr:
-          kind: path
-          path:
-            - author
-            - id
       - name: author__username
         type: Utf8
-        expr:
-          kind: path
-          path:
-            - author
-            - username
       - name: mention_usernames
         type: Utf8
-        expr:
-          kind: join_array_path
-          path:
-            - mentions
-          item_path:
-            - username
-          separator: ", "
