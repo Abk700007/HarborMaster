@@ -1,0 +1,102 @@
+# HarborMaster Live GitHub Source Spec
+#
+# This source spec connects Coral directly to the real GitHub REST API.
+# It exposes pull requests and issues from your repo as SQL tables.
+#
+# Setup:
+#   $env:GITHUB_TOKEN  = "ghp_your_token"
+#   $env:GITHUB_OWNER  = "your-username"
+#   $env:GITHUB_REPO   = "your-repo"
+#
+#   coral source lint .\coral\source-specs\hm_github_live.yaml
+#   coral source add --file .\coral\source-specs\hm_github_live.yaml
+#   coral source test hm_github_live
+#
+# Then run:
+#   coral sql "SELECT id, title, state FROM hm_github_live.pull_requests LIMIT 5"
+
+name: hm_github_live
+version: 0.1.0
+dsl_version: 3
+backend: http
+test_queries:
+  - SELECT id, title, state FROM hm_github_live.pull_requests LIMIT 1
+inputs:
+  GITHUB_API_BASE:
+    kind: variable
+    default: https://api.github.com
+    hint: GitHub API base URL.
+  GITHUB_OWNER:
+    kind: variable
+    hint: Repository owner (username or org).
+  GITHUB_REPO:
+    kind: variable
+    hint: Repository name.
+  GITHUB_TOKEN:
+    kind: secret
+    hint: Personal access token with repo:read scope.
+base_url: "{{input.GITHUB_API_BASE}}"
+auth:
+  type: HeaderAuth
+  headers:
+    - name: Authorization
+      from: template
+      template: Bearer {{input.GITHUB_TOKEN}}
+request_headers:
+  - name: Accept
+    from: literal
+    value: application/vnd.github+json
+  - name: X-GitHub-Api-Version
+    from: literal
+    value: "2022-11-28"
+rate_limit:
+  retry_after_header: Retry-After
+tables:
+  - name: pull_requests
+    description: Open pull requests from the configured GitHub repository.
+    request:
+      method: GET
+      path: /repos/{{input.GITHUB_OWNER}}/{{input.GITHUB_REPO}}/pulls
+      query:
+        - name: state
+          from: literal
+          value: open
+        - name: per_page
+          from: literal
+          value: 50
+    response:
+      row_strategy: direct
+      allow_404_empty: false
+    columns:
+      - name: id
+        type: Utf8
+        expr:
+          kind: path
+          path: [number]
+      - name: title
+        type: Utf8
+      - name: state
+        type: Utf8
+      - name: draft
+        type: Boolean
+      - name: created_at
+        type: Utf8
+      - name: updated_at
+        type: Utf8
+      - name: html_url
+        type: Utf8
+      - name: author_login
+        type: Utf8
+        expr:
+          kind: path
+          path: [user, login]
+      - name: head_ref
+        type: Utf8
+        expr:
+          kind: path
+          path: [head, ref]
+      - name: base_ref
+        type: Utf8
+        expr:
+          kind: path
+          path: [base, ref]

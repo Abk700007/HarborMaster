@@ -1,0 +1,27 @@
+name: hm_notion
+version: 0.1.0
+dsl_version: 3
+backend: jsonl
+test_queries:
+  - SELECT id, title, issue_key FROM hm_notion.pages LIMIT 1
+tables:
+  - name: pages
+    description: Demo Notion pages including release checklists, FAQs, and roadmap items.
+    source:
+      location: __DEMO_DATA_URI__/notion/
+      glob: "*.jsonl"
+    columns:
+      - name: id
+        type: Utf8
+      - name: title
+        type: Utf8
+      - name: issue_key
+        type: Utf8
+      - name: status
+        type: Utf8
+      - name: last_edited
+        type: Utf8
+      - name: url
+        type: Utf8
+      - name: content
+        type: Utf8

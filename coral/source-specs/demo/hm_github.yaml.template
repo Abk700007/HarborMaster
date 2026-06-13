@@ -1,0 +1,31 @@
+name: hm_github
+version: 0.1.0
+dsl_version: 3
+backend: jsonl
+test_queries:
+  - SELECT id, title FROM hm_github.pull_requests LIMIT 1
+tables:
+  - name: pull_requests
+    description: Demo GitHub pull requests and issue-like work items for HarborMaster.
+    source:
+      location: __DEMO_DATA_URI__/github/
+      glob: "*.jsonl"
+    columns:
+      - name: id
+        type: Utf8
+      - name: title
+        type: Utf8
+      - name: issue_key
+        type: Utf8
+      - name: status
+        type: Utf8
+      - name: review_state
+        type: Utf8
+      - name: ci_state
+        type: Utf8
+      - name: updated_at
+        type: Utf8
+      - name: author
+        type: Utf8
+      - name: url
+        type: Utf8
