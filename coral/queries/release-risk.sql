@@ -1,17 +1,12 @@
 -- HarborMaster release risk board
 SELECT
-  li.key,
-  li.title,
-  li.priority,
-  gh.title AS pull_request,
+  gh.id AS pr_number,
+  gh.title AS pr_title,
   gh.ci_state,
-  sl.text AS team_blocker,
   dc.content AS community_signal,
   no.title AS release_note
-FROM hm_linear.issues li
-JOIN hm_github.pull_requests gh ON gh.issue_key = li.key
-LEFT JOIN hm_slack.messages sl ON sl.issue_key = li.key
-LEFT JOIN hm_discord.messages dc ON dc.issue_key = li.key
-LEFT JOIN hm_notion.pages no ON no.issue_key = li.key
-WHERE li.release = 'v1.4'
-ORDER BY li.score DESC;
+FROM hm_github.pull_requests gh
+LEFT JOIN hm_discord.messages dc ON dc.issue_key = gh.issue_key
+LEFT JOIN hm_notion.pages no ON no.issue_key = gh.issue_key
+WHERE gh.review_state = 'changes_requested' OR gh.ci_state = 'failed'
+ORDER BY gh.updated_at DESC;
