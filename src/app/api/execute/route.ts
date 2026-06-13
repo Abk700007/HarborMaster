@@ -30,7 +30,7 @@ export async function POST(request: Request) {
         try {
           const google = createGoogleGenerativeAI({ apiKey: config.geminiKey });
           const prompt = `You are HarborMaster, an AI first mate for open-source maintainers.
-Draft a short, highly professional message for ${actionType === "discord" ? "the Discord support channel" : actionType === "slack" ? "the internal Slack engineering channel" : "the Linear task comment"}.
+Draft a short, highly professional message for ${actionType === "discord" ? "the Discord support channel" : actionType === "github" ? "the GitHub pull request comment" : "the Notion release page checklist"}.
 
 Context:
 - Action Category: ${payload.category || "General"}
@@ -55,10 +55,10 @@ Write only the draft text. Do not wrap in quotes or add extra introductory sente
         // Fallback realistic drafts
         if (actionType === "discord") {
           draftText = `Hi community! Regarding "${payload.title}" (${payload.issueKey}), we have identified the issue. The current status is ${payload.status || "in progress"} and we are verifying the fix. We will update you as soon as it's merged.`;
-        } else if (actionType === "slack") {
+        } else if (actionType === "github") {
           draftText = `Hey team, quick update on ${payload.issueKey} (${payload.title}). Status is currently ${payload.status || "CI failing"}. I'm jumping on this now to unblock the release.`;
         } else {
-          draftText = `Status update: marking "${payload.title}" as under active review. CI state is ${payload.status || "pending"}. Linked PR is being verified.`;
+          draftText = `Release checklist update: marking "${payload.title}" as under active review. CI state is ${payload.status || "pending"}. Linked documentation page is being verified.`;
         }
       }
 
@@ -152,11 +152,11 @@ Write only the draft text. Do not wrap in quotes or add extra introductory sente
       }
     }
 
-    if (actionType === "slack" || actionType === "linear") {
+    if (actionType === "notion") {
       return NextResponse.json({
         ok: true,
         live: false,
-        message: `Simulated ${actionType === "slack" ? "Slack Post" : "Linear Status Update"} successful!`,
+        message: "Simulated Notion Page Update (No active integration token):",
         details: payload,
       });
     }

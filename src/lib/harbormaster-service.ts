@@ -23,12 +23,8 @@ type CoralBriefRow = {
   status: string;
   review_state: string;
   ci_state: string;
-  priority: string;
-  due_date: string;
-  assignee: string;
-  slack_blocker?: string | null;
-  roadmap_item?: string | null;
   community_signal?: string | null;
+  roadmap_item?: string | null;
 };
 
 const enabled = () => process.env.HARBORMASTER_USE_CORAL === "1";
@@ -109,7 +105,7 @@ export async function answerQuestion(question: string): Promise<ChatResponse> {
 
       const schemasPrompt = `
 You are an expert SQL generator for the Coral Query Engine.
-Coral allows joining multiple data sources (GitHub, Discord, Slack, Linear, Notion) as SQL tables.
+Coral allows joining multiple data sources (GitHub, Discord, Notion) as SQL tables.
 
 Here are the available schemas and tables in the system:
 
@@ -117,35 +113,17 @@ Here are the available schemas and tables in the system:
    - hm_github.pull_requests:
      - id (Utf8) - PR ID (e.g. pr-184)
      - title (Utf8)
-     - issue_key (Utf8) - references linear issue key (e.g. LIN-431)
+     - issue_key (Utf8) - references common join key (e.g. key-431)
      - status (Utf8) - 'open', 'merged', etc.
      - review_state (Utf8) - 'changes_requested', 'review_requested', 'approved', 'none'
      - ci_state (Utf8) - 'failed', 'passed', 'not_applicable'
      - updated_at (Utf8)
      - author (Utf8)
      - url (Utf8)
-   - hm_linear.issues:
-     - key (Utf8) - e.g. LIN-431
-     - title (Utf8)
-     - priority (Utf8) - 'urgent', 'high', 'medium', 'low'
-     - status (Utf8)
-     - assignee (Utf8)
-     - due_date (Utf8)
-     - release (Utf8) - e.g. 'v1.4'
-     - score (Int64) - priority score (0-100)
-     - url (Utf8)
-   - hm_slack.messages:
-     - id (Utf8)
-     - channel_name (Utf8)
-     - text (Utf8)
-     - author (Utf8)
-     - issue_key (Utf8) - references linear issue key
-     - created_at (Utf8)
-     - sentiment (Utf8)
    - hm_notion.pages:
      - id (Utf8)
      - title (Utf8)
-     - issue_key (Utf8) - references linear issue key
+     - issue_key (Utf8) - references common join key
      - status (Utf8)
      - last_edited (Utf8)
      - url (Utf8)
@@ -155,7 +133,7 @@ Here are the available schemas and tables in the system:
      - channel_name (Utf8)
      - author_name (Utf8)
      - content (Utf8)
-     - issue_key (Utf8) - references linear issue key
+     - issue_key (Utf8) - references common join key
      - created_at (Utf8)
      - sentiment (Utf8) - 'blocked', 'negative', 'neutral', 'positive'
 
@@ -187,7 +165,7 @@ Rules:
 - Output ONLY the raw SQL query. Do NOT wrap it in any explanation or markdown code blocks (like \`\`\`sql).
 - If the user asks about live GitHub PRs, use 'hm_github_live.pull_requests' (only if configured).
 - If the user asks about live Discord messages, use 'discord.messages' (only if configured).
-- If the question is about Linear, Slack, or Notion, or if it is a general morning brief question, use the local demo tables (e.g. 'hm_linear.issues', 'hm_slack.messages', 'hm_notion.pages', 'hm_github.pull_requests', 'hm_discord.messages').
+- If the question is about Notion, use the local demo tables (e.g. 'hm_notion.pages', 'hm_github.pull_requests', 'hm_discord.messages').
 - Limit results (e.g. LIMIT 5) to keep it fast.
 - Ensure the query has valid JOIN conditions if querying multiple tables.
 `;
@@ -278,32 +256,32 @@ function chooseSql(question: string) {
 }
 
 function rowToAction(row: CoralBriefRow): ActionItem {
-  const score = row.priority === "urgent" ? 96 : row.priority === "high" ? 84 : 72;
+  const score = row.ci_state === "failed" ? 97 : row.review_state === "changes_requested" ? 88 : 72;
   const evidence: EvidenceItem[] = [
     {
       source: "GitHub",
-      label: row.issue_key,
+      label: `PR #${row.id.replace("pr-", "")}`,
       excerpt: `${row.title} has CI state ${row.ci_state} and review state ${row.review_state}.`,
       ref: row.id,
       time: "live",
     },
   ];
 
-  if (row.slack_blocker) {
-    evidence.push({
-      source: "Slack",
-      label: "Team blocker",
-      excerpt: row.slack_blocker,
-      ref: row.issue_key,
-      time: "live",
-    });
-  }
-
   if (row.community_signal) {
     evidence.push({
       source: "Discord",
       label: "Community signal",
       excerpt: row.community_signal,
+      ref: row.issue_key,
+      time: "live",
+    });
+  }
+
+  if (row.roadmap_item) {
+    evidence.push({
+      source: "Notion",
+      label: "Roadmap details",
+      excerpt: row.roadmap_item,
       ref: row.issue_key,
       time: "live",
     });
@@ -316,9 +294,9 @@ function rowToAction(row: CoralBriefRow): ActionItem {
     priority: score > 90 ? "Critical" : score > 80 ? "High" : "Medium",
     score,
     status: row.ci_state === "failed" ? "CI failing" : row.review_state,
-    due: row.due_date,
-    owner: row.assignee,
-    summary: `Coral joined ${row.issue_key} across GitHub, Linear, Slack, Notion, and Discord to rank this work.`,
+    due: "Today",
+    owner: "You",
+    summary: `Coral joined ${row.issue_key} across GitHub, Discord, and Notion to rank this work.`,
     sqlKey: "morningBrief",
     links: [],
     evidence,
@@ -328,11 +306,7 @@ function rowToAction(row: CoralBriefRow): ActionItem {
 function rowsToEvidence(rows: Record<string, unknown>[]): EvidenceItem[] {
   return rows.slice(0, 4).map((row, index) => {
     let source = "GitHub";
-    if ("assignee" in row || "due_date" in row || "release" in row) {
-      source = "Linear";
-    } else if ("slack_blocker" in row || ("channel_name" in row && "text" in row)) {
-      source = "Slack";
-    } else if ("content" in row || "author_name" in row || "author__username" in row || "mention_usernames" in row) {
+    if ("content" in row || "author_name" in row || "author__username" in row || "mention_usernames" in row) {
       source = "Discord";
     } else if ("last_edited" in row || ("content" in row && !("author_name" in row))) {
       source = "Notion";
@@ -346,7 +320,6 @@ function rowsToEvidence(rows: Record<string, unknown>[]): EvidenceItem[] {
       row.title || 
       row.content || 
       row.text || 
-      row.slack_blocker || 
       row.community_signal || 
       JSON.stringify(row)
     );
