@@ -1,0 +1,5 @@
+{"key":"LIN-431","title":"OAuth retry loop causes login failures on token expiry","priority":"urgent","status":"in_progress","assignee":"arjun","due_date":"2026-05-17","release":"v1.4","score":97,"url":"https://linear.app/acme/issue/LIN-431"}
+{"key":"LIN-426","title":"Stream parser logs through Coral trace sink","priority":"high","status":"in_review","assignee":"maya","due_date":"2026-05-18","release":"v1.4","score":88,"url":"https://linear.app/acme/issue/LIN-426"}
+{"key":"LIN-422","title":"Document paginated table discovery for large catalogs","priority":"high","status":"open","assignee":"neel","due_date":"2026-05-19","release":"v1.4","score":82,"url":"https://linear.app/acme/issue/LIN-422"}
+{"key":"LIN-418","title":"Add retry budget config to Coral source adapter","priority":"medium","status":"open","assignee":"arjun","due_date":"2026-05-21","release":"v1.5","score":74,"url":"https://linear.app/acme/issue/LIN-418"}
+{"key":"LIN-415","title":"Benchmark cross-source JOIN latency at 50k rows","priority":"medium","status":"backlog","assignee":"maya","due_date":"2026-05-23","release":"v1.5","score":68,"url":"https://linear.app/acme/issue/LIN-415"}
