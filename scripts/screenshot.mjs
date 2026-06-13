@@ -17,8 +17,8 @@ await page.waitForTimeout(2500);
 await page.screenshot({ path: 'scripts/shot_01_landing.png', fullPage: false });
 console.log('   ✓ shot_01_landing.png');
 
-// ─── 2. Click "Start Morning Brief" ──────────────────────────────────────────
-const startBtn = page.locator('button', { hasText: 'Start Morning Brief' }).first();
+// ─── 2. Click "Build My Workspace" ──────────────────────────────────────────
+const startBtn = page.locator('button', { hasText: 'Build My Workspace' }).first();
 if (await startBtn.isVisible()) {
   await startBtn.click();
   await page.waitForTimeout(1200);
@@ -26,21 +26,17 @@ if (await startBtn.isVisible()) {
   console.log('   ✓ shot_02_auth.png');
 }
 
-// ─── 3. Enter a fake key and submit to reach onboarding ──────────────────────
-const geminiInput = page.locator('input[type="password"]').first();
-if (await geminiInput.isVisible()) {
-  await geminiInput.fill('AIzaSyFakeKeyForScreenshot12345');
-  const continueBtn = page.locator('button', { hasText: 'Continue' }).first();
-  if (await continueBtn.isVisible()) {
-    await continueBtn.click();
-    await page.waitForTimeout(1000);
-  }
+// ─── 3. Click "Continue with GitHub" to reach onboarding Step 1 ──────────────
+const authBtn = page.locator('button', { hasText: 'Continue with GitHub' }).first();
+if (await authBtn.isVisible()) {
+  await authBtn.click();
+  await page.waitForTimeout(1200);
 }
 await page.screenshot({ path: 'scripts/shot_03_onboard_s1.png', fullPage: false });
 console.log('   ✓ shot_03_onboard_s1.png');
 
-// ─── 4. Step 2 via "Next" button ─────────────────────────────────────────────
-const nextBtn1 = page.locator('button', { hasText: 'Next: Connect Discord' }).first();
+// ─── 4. Step 2 (Connect GitHub) via "Next" button ─────────────────────────────
+const nextBtn1 = page.locator('button', { hasText: 'Next: Connect Repositories' }).first();
 if (await nextBtn1.isVisible()) {
   await nextBtn1.click();
   await page.waitForTimeout(800);
@@ -48,8 +44,8 @@ if (await nextBtn1.isVisible()) {
 await page.screenshot({ path: 'scripts/shot_04_onboard_s2.png', fullPage: false });
 console.log('   ✓ shot_04_onboard_s2.png');
 
-// ─── 5. Step 3 ───────────────────────────────────────────────────────────────
-const nextBtn2 = page.locator('button', { hasText: 'Next: Connect Notion' }).first();
+// ─── 5. Step 3 (Connect Discord) ───────────────────────────────────────────────
+const nextBtn2 = page.locator('button', { hasText: 'Next: Connect Community' }).first();
 if (await nextBtn2.isVisible()) {
   await nextBtn2.click();
   await page.waitForTimeout(800);
@@ -57,8 +53,8 @@ if (await nextBtn2.isVisible()) {
 await page.screenshot({ path: 'scripts/shot_05_onboard_s3.png', fullPage: false });
 console.log('   ✓ shot_05_onboard_s3.png');
 
-// ─── 6. Step 4 ───────────────────────────────────────────────────────────────
-const nextBtn3 = page.locator('button', { hasText: 'Next: Connect Slack' }).first();
+// ─── 6. Step 4 (Connect Notion) ────────────────────────────────────────────────
+const nextBtn3 = page.locator('button', { hasText: 'Next: Connect Documentation' }).first();
 if (await nextBtn3.isVisible()) {
   await nextBtn3.click();
   await page.waitForTimeout(800);
@@ -66,14 +62,18 @@ if (await nextBtn3.isVisible()) {
 await page.screenshot({ path: 'scripts/shot_06_onboard_s4.png', fullPage: false });
 console.log('   ✓ shot_06_onboard_s4.png');
 
-// ─── 7. Sync (Step 5) ────────────────────────────────────────────────────────
-const finishBtn = page.locator('button', { hasText: 'Finish' }).first();
+// ─── 7. Sync (Step 5) & Dashboard ─────────────────────────────────────────────
+const finishBtn = page.locator('button', { hasText: 'Build HarborMaster Workspace' }).first();
 if (await finishBtn.isVisible()) {
   await finishBtn.click();
-  await page.waitForTimeout(3000); // wait for sync animation
+  await page.waitForTimeout(1200); // wait for sync animation to be midway
 }
 await page.screenshot({ path: 'scripts/shot_07_onboard_s5_sync.png', fullPage: false });
 console.log('   ✓ shot_07_onboard_s5_sync.png');
+
+await page.waitForTimeout(3000); // let it complete and transition to dashboard
+await page.screenshot({ path: 'scripts/shot_08_dashboard.png', fullPage: false });
+console.log('   ✓ shot_08_dashboard.png');
 
 // ─── Summary ─────────────────────────────────────────────────────────────────
 if (errors.length) {
