@@ -12,22 +12,13 @@ export const demoSources: SourceStatus[] = [
     description: "PRs, CI state, review state, issue references",
   },
   {
-    id: "linear",
-    label: "Linear",
-    schema: "hm_linear",
-    status: "demo",
-    tables: 2,
-    latencyMs: 71,
-    description: "Issue priority, owner, due date, release scope",
-  },
-  {
-    id: "slack",
-    label: "Slack",
-    schema: "hm_slack",
+    id: "discord",
+    label: "Discord",
+    schema: "hm_discord",
     status: "demo",
     tables: 1,
-    latencyMs: 52,
-    description: "Team blockers and handoff context",
+    latencyMs: 93,
+    description: "Community complaints and maintainer support signals",
   },
   {
     id: "notion",
@@ -36,16 +27,7 @@ export const demoSources: SourceStatus[] = [
     status: "demo",
     tables: 1,
     latencyMs: 66,
-    description: "Roadmap notes and launch checklist",
-  },
-  {
-    id: "discord",
-    label: "Discord",
-    schema: "hm_discord",
-    status: "demo",
-    tables: 1,
-    latencyMs: 93,
-    description: "Community complaints and maintainer support signals",
+    description: "Roadmap notes, design docs, and launch checklist",
   },
 ];
 
@@ -60,11 +42,10 @@ export const demoActions: ActionItem[] = [
     due: "Today 18:00",
     owner: "You",
     summary:
-      "The same issue appears in the release board, a failing PR, the engineering channel, and two community complaints. Fixing this removes the biggest launch blocker.",
+      "The same issue appears in a failing PR, the developer logs, and two community complaints. Fixing this removes the biggest launch blocker.",
     sqlKey: "morningBrief",
     links: [
       { label: "PR #184", href: "https://github.com/acme/harbor/pull/184" },
-      { label: "LIN-431", href: "https://linear.app/acme/issue/LIN-431" },
     ],
     evidence: [
       {
@@ -73,20 +54,6 @@ export const demoActions: ActionItem[] = [
         excerpt: "fix OAuth token refresh retry loop",
         ref: "acme/harbor#184",
         time: "31m ago",
-      },
-      {
-        source: "Linear",
-        label: "LIN-431",
-        excerpt: "Urgent release blocker, assigned to you, due today.",
-        ref: "LIN-431",
-        time: "47m ago",
-      },
-      {
-        source: "Slack",
-        label: "#engineering",
-        excerpt: "LIN-431 is still blocking the v1.4 smoke test.",
-        ref: "1729.18",
-        time: "24m ago",
       },
       {
         source: "Discord",
@@ -107,11 +74,10 @@ export const demoActions: ActionItem[] = [
     due: "Today 21:00",
     owner: "Maya",
     summary:
-      "The PR is clean, linked to a high-priority Linear issue, and Slack shows the owner is waiting on your review to unblock docs.",
+      "The PR is clean, linked to a high-priority documentation roadmap update in Notion, and Discord shows users are waiting for this feature.",
     sqlKey: "reviewQueue",
     links: [
       { label: "PR #177", href: "https://github.com/acme/harbor/pull/177" },
-      { label: "LIN-426", href: "https://linear.app/acme/issue/LIN-426" },
     ],
     evidence: [
       {
@@ -122,17 +88,10 @@ export const demoActions: ActionItem[] = [
         time: "2h ago",
       },
       {
-        source: "Linear",
-        label: "LIN-426",
-        excerpt: "High priority; docs work depends on final API shape.",
-        ref: "LIN-426",
-        time: "2h ago",
-      },
-      {
-        source: "Slack",
-        label: "#maintainers",
-        excerpt: "Waiting for final review on LIN-426 before I update the guide.",
-        ref: "1729.77",
+        source: "Notion",
+        label: "Roadmap Notes",
+        excerpt: "Launch blocker: requires streaming logs API implementation validation.",
+        ref: "notion:roadmap-streaming-logs",
         time: "1h ago",
       },
     ],
@@ -151,7 +110,6 @@ export const demoActions: ActionItem[] = [
     sqlKey: "communityPain",
     links: [
       { label: "Issue #91", href: "https://github.com/acme/harbor/issues/91" },
-      { label: "LIN-422", href: "https://linear.app/acme/issue/LIN-422" },
     ],
     evidence: [
       {
@@ -184,16 +142,16 @@ export const demoRisks: RiskRow[] = [
     id: "risk-1",
     surface: "v1.4 release",
     blocker: "OAuth retry loop",
-    linkedWork: "LIN-431 / PR #184",
-    impact: "Login failures repeated in support and Discord",
+    linkedWork: "PR #184",
+    impact: "Login failures repeated in support and Discord channels",
     score: 97,
-    sources: ["GitHub", "Linear", "Slack", "Discord"],
+    sources: ["GitHub", "Discord"],
   },
   {
     id: "risk-2",
     surface: "Docs launch",
     blocker: "Schema discovery FAQ gap",
-    linkedWork: "LIN-422 / Issue #91",
+    linkedWork: "Issue #91",
     impact: "Negative community sentiment is rising",
     score: 82,
     sources: ["Discord", "Notion", "GitHub"],
@@ -202,10 +160,10 @@ export const demoRisks: RiskRow[] = [
     id: "risk-3",
     surface: "Trace sink beta",
     blocker: "Review not merged",
-    linkedWork: "LIN-426 / PR #177",
+    linkedWork: "PR #177",
     impact: "Docs cannot finalize examples",
     score: 76,
-    sources: ["GitHub", "Linear", "Slack"],
+    sources: ["GitHub", "Notion"],
   },
 ];
 
@@ -216,7 +174,7 @@ export function buildDemoBrief(notice?: string): BriefResponse {
     sourceStatuses: demoSources,
     actions: demoActions,
     risks: demoRisks,
-    queryCount: 4,
+    queryCount: 3,
     cacheHitRate: 73,
     latencyMs: 190,
     sql: sqlPlaybooks,
@@ -251,7 +209,7 @@ export function buildDemoChat(question: string): ChatResponse {
     followups: [
       "What is blocking the v1.4 release?",
       "Which PR needs my review first?",
-      "What are users complaining about?",
+      "What are users complaining about in Discord?",
     ],
   };
 }

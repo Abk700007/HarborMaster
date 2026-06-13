@@ -1,5 +1,0 @@
-{"id":"msg-1001","channel_name":"engineering","text":"LIN-431 is still blocking the v1.4 smoke test. OAuth fails on every token refresh cycle.","author":"priya","issue_key":"LIN-431","created_at":"2026-05-17T10:06:00Z","sentiment":"blocked"}
-{"id":"msg-1002","channel_name":"maintainers","text":"Waiting for final review on LIN-426 before I update the streaming guide.","author":"maya","issue_key":"LIN-426","created_at":"2026-05-17T09:20:00Z","sentiment":"blocked"}
-{"id":"msg-1003","channel_name":"engineering","text":"LIN-431 CI is red again. Retried twice. Looks like the refresh token lifecycle edge case.","author":"arjun","issue_key":"LIN-431","created_at":"2026-05-17T10:31:00Z","sentiment":"negative"}
-{"id":"msg-1004","channel_name":"releases","text":"v1.4 branch cut today at 18:00. LIN-431 must be green or we slip.","author":"priya","issue_key":"LIN-431","created_at":"2026-05-17T08:00:00Z","sentiment":"blocked"}
-{"id":"msg-1005","channel_name":"maintainers","text":"LIN-422 docs gap is getting picked up in Discord support threads. We should prioritise.","author":"neel","issue_key":"LIN-422","created_at":"2026-05-17T07:45:00Z","sentiment":"negative"}
