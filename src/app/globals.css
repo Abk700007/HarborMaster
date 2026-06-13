@@ -1,0 +1,295 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: "Geist", "Geist Fallback", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", "Geist Mono Fallback", ui-monospace, monospace;
+  --font-heading: "Geist", "Geist Fallback", ui-sans-serif, system-ui, sans-serif;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  /* Ground background - deep dark navy */
+  --background: oklch(0.065 0.015 240);
+  --foreground: oklch(0.92 0.008 220);
+  /* Elevated cards - clean graphite slate */
+  --card: oklch(0.145 0.02 238);
+  --card-foreground: oklch(0.92 0.008 220);
+  --popover: oklch(0.145 0.02 238);
+  --popover-foreground: oklch(0.92 0.008 220);
+  /* Accent teal-blue */
+  --primary: oklch(0.76 0.12 195);
+  --primary-foreground: oklch(0.065 0.015 240);
+  --secondary: oklch(0.19 0.022 235);
+  --secondary-foreground: oklch(0.85 0.01 220);
+  --muted: oklch(0.17 0.02 235);
+  --muted-foreground: oklch(0.55 0.02 225);
+  --accent: oklch(0.20 0.025 235);
+  --accent-foreground: oklch(0.90 0.01 220);
+  --destructive: oklch(0.60 0.20 22);
+  /* Subtle, clean border */
+  --border: oklch(1 0 0 / 6%);
+  --input: oklch(1 0 0 / 8%);
+  --ring: oklch(0.76 0.12 195 / 50%);
+  --chart-1: oklch(0.76 0.12 195);
+  --chart-2: oklch(0.70 0.14 155);
+  --chart-3: oklch(0.66 0.16 260);
+  --chart-4: oklch(0.72 0.13 50);
+  --chart-5: oklch(0.62 0.18 330);
+  /* Intermediate sidebar */
+  --sidebar: oklch(0.105 0.018 238);
+  --sidebar-foreground: oklch(0.90 0.008 220);
+  --sidebar-primary: oklch(0.76 0.12 195);
+  --sidebar-primary-foreground: oklch(0.065 0.015 240);
+  --sidebar-accent: oklch(0.17 0.022 235);
+  --sidebar-accent-foreground: oklch(0.90 0.008 220);
+  --sidebar-border: oklch(1 0 0 / 5%);
+  --sidebar-ring: oklch(0.76 0.12 195 / 50%);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+/* ── Custom scrollbar ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: oklch(1 0 0 / 12%);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(1 0 0 / 22%);
+}
+
+/* ── Animated mesh gradient background ── */
+.hm-bg-mesh {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 10%, oklch(0.55 0.18 195 / 12%) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 90%, oklch(0.5 0.2 260 / 10%) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 60% at 50% 50%, oklch(0.45 0.15 215 / 6%) 0%, transparent 70%),
+    oklch(0.112 0.018 240);
+}
+
+/* ── Glowing cyan border utility ── */
+.hm-glow {
+  box-shadow: 0 0 0 1px oklch(0.78 0.14 195 / 20%), 0 4px 24px -4px oklch(0.78 0.14 195 / 15%);
+}
+
+/* ── Metric card number pulse on mount ── */
+@keyframes hm-count-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.hm-count-in {
+  animation: hm-count-in 0.4s ease both;
+}
+
+/* ── Shimmer skeleton ── */
+@keyframes hm-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+.hm-shimmer {
+  background: linear-gradient(90deg,
+    oklch(1 0 0 / 4%) 25%,
+    oklch(1 0 0 / 10%) 50%,
+    oklch(1 0 0 / 4%) 75%
+  );
+  background-size: 200% 100%;
+  animation: hm-shimmer 1.6s ease-in-out infinite;
+}
+
+/* ── Score ring progress bar ── */
+.hm-score-bar {
+  transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ── Constellation Grid Pattern ── */
+.hm-grid-pattern {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* ── Radar sweep animation ── */
+@keyframes hm-radar {
+  0% { transform: rotate(0deg); opacity: 0.6; }
+  50% { opacity: 0.2; }
+  100% { transform: rotate(360deg); opacity: 0.6; }
+}
+.hm-radar-sweep {
+  transform-origin: center;
+  animation: hm-radar 22s linear infinite;
+}
+
+/* ── Signal line flow ── */
+@keyframes hm-signal-flow {
+  0% { stroke-dashoffset: 24; }
+  100% { stroke-dashoffset: 0; }
+}
+.hm-signal-line {
+  stroke-dasharray: 8, 4;
+  animation: hm-signal-flow 2s linear infinite;
+}
+
+/* ── Soft floating animation ── */
+@keyframes hm-float {
+  0% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-3px) rotate(0.4deg); }
+  100% { transform: translateY(0px) rotate(0deg); }
+}
+.hm-floating {
+  animation: hm-float 8s ease-in-out infinite;
+}
+.hm-float-delayed-1 {
+  animation: hm-float 8s ease-in-out infinite;
+  animation-delay: 2s;
+}
+.hm-float-delayed-2 {
+  animation: hm-float 8s ease-in-out infinite;
+  animation-delay: 4s;
+}
+.hm-float-delayed-3 {
+  animation: hm-float 8s ease-in-out infinite;
+  animation-delay: 6s;
+}
+
+/* ── Pulse glow for connections ── */
+@keyframes hm-pulse-glow {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.8; }
+}
+.hm-connection-glow {
+  animation: hm-pulse-glow 3s ease-in-out infinite;
+}
+
+/* ── Fade-in transition stages ── */
+.hm-fade-stage {
+  animation: hm-count-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ── Suppress Next.js build indicator in demo/production feel ── */
+nextjs-portal {
+  display: none !important;
+}
+
+/* ── Platform Preview Helpers ── */
+.preview-github {
+  background: rgba(14, 20, 40, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.preview-discord {
+  background: #313338;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+
+.preview-slack {
+  background: #1a1d21;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.preview-linear {
+  background: #151516;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 12px;
+}
+
