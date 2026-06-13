@@ -4,7 +4,7 @@ HarborMaster is a Coral-powered command center for open-source maintainers. It a
 
 > What should I fix, review, reply to, or ship next?
 
-It joins GitHub, Linear, Slack, Notion, and Discord-shaped data through Coral SQL, then turns the joined evidence into ranked actions with visible SQL and citations.
+It joins GitHub, Discord, and Notion-shaped data through Coral SQL, then turns the joined evidence into ranked actions with visible SQL and citations.
 
 ## Why It Fits Pirates of the Coral-bean
 
@@ -35,11 +35,9 @@ $env:HARBORMASTER_USE_CORAL="1"
 npm run dev
 ```
 
-The setup script generates local source specs from `coral/source-specs/demo/*.yaml.template` and installs five Coral schemas:
+The setup script generates local source specs from `coral/source-specs/demo/*.yaml.template` and installs three Coral schemas:
 
 - `hm_github`
-- `hm_linear`
-- `hm_slack`
 - `hm_notion`
 - `hm_discord`
 
