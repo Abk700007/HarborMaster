@@ -549,6 +549,24 @@ export function HarborMasterApp() {
     }
     if (onboardingStep === 4) {
       setNotionSyncOk(true);
+      // Auto-save all credentials entered during onboarding
+      fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          geminiKey,
+          githubToken,
+          githubOwner,
+          githubRepo,
+          discordToken,
+          discordChannel,
+          notionToken,
+        }),
+      })
+        .then((res) => {
+          if (res.ok) void refreshBrief();
+        })
+        .catch((err) => console.error("Failed to save onboarding settings:", err));
     }
 
     if (onboardingStep < 4) {

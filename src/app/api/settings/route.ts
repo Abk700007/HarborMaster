@@ -20,6 +20,7 @@ export async function GET() {
       githubRepo: config.githubRepo || "",
       discordToken: config.discordToken ? "••••••••" : "",
       discordChannel: config.discordChannel || "",
+      notionToken: config.notionToken ? "••••••••" : "",
     });
   } catch (error) {
     return NextResponse.json({});
@@ -44,6 +45,7 @@ export async function POST(request: Request) {
       githubRepo: body.githubRepo,
       discordToken: body.discordToken === "••••••••" ? existing.discordToken : body.discordToken,
       discordChannel: body.discordChannel,
+      notionToken: body.notionToken === "••••••••" ? existing.notionToken : body.notionToken,
     };
 
     await fs.writeFile(CONFIG_PATH, JSON.stringify(newConfig, null, 2));
