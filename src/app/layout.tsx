@@ -16,8 +16,8 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "HarborMaster — Coral-Powered Maintainer Command Center",
   description:
-    "HarborMaster joins GitHub, Linear, Slack, Notion, and Discord in a single Coral SQL query to tell open-source maintainers exactly what to fix, review, or ship next.",
-  keywords: ["Coral", "open-source", "maintainer", "SQL", "GitHub", "Linear", "Slack", "developer tools"],
+    "HarborMaster joins GitHub, Discord, and Notion in a single Coral SQL query to tell open-source maintainers exactly what to fix, review, or ship next.",
+  keywords: ["Coral", "open-source", "maintainer", "SQL", "GitHub", "Discord", "Notion", "developer tools"],
   openGraph: {
     title: "HarborMaster",
     description: "Your AI first mate for open-source projects. Powered by Coral cross-source SQL.",
