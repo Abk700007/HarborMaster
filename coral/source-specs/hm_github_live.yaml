@@ -2,7 +2,7 @@
 name: hm_github_live
 version: 0.1.0
 dsl_version: 3
-backend: jsonl
+backend: file
 test_queries:
   - SELECT id, title FROM hm_github_live.pull_requests LIMIT 1
 inputs:
@@ -12,8 +12,9 @@ inputs:
 tables:
   - name: pull_requests
     description: Open pull requests from the configured GitHub repositories.
+    format: jsonl
     source:
-      location: "{{input.GITHUB_DATA_DIR}}/github_live/"
+      location: "file:///{{input.GITHUB_DATA_DIR}}/github_live/"
       glob: "*.jsonl"
     columns:
       - name: id

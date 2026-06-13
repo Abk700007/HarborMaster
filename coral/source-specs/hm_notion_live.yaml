@@ -2,7 +2,7 @@
 name: hm_notion_live
 version: 0.1.0
 dsl_version: 3
-backend: jsonl
+backend: file
 test_queries:
   - SELECT id, title FROM hm_notion_live.pages LIMIT 1
 inputs:
@@ -12,8 +12,9 @@ inputs:
 tables:
   - name: pages
     description: Pages and documents from your Notion workspace.
+    format: jsonl
     source:
-      location: "{{input.NOTION_DATA_DIR}}/notion_live/"
+      location: "file:///{{input.NOTION_DATA_DIR}}/notion_live/"
       glob: "*.jsonl"
     columns:
       - name: id

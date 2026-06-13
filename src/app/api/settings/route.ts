@@ -136,7 +136,7 @@ export async function POST(request: Request) {
 
     // Dynamically attempt to register Coral sources
     try {
-      await syncLiveWorkspace(newConfig);
+      await syncLiveWorkspace(newConfig, true);
 
       const env = getCoralEnv(newConfig);
 

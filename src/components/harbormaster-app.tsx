@@ -2718,8 +2718,8 @@ export function HarborMasterApp() {
                           <h3 className="text-xs font-semibold text-white">Discord Support Channels</h3>
                           <div className="grid gap-3 sm:grid-cols-2">
                             <div className="space-y-1">
-                              <label className="text-[10px] font-mono text-slate-500">CHANNEL ID</label>
-                              <Input value={discordChannel} onChange={(e) => setDiscordChannel(e.target.value)} placeholder="1042..." className="bg-slate-950 border-slate-900 text-xs" />
+                              <label className="text-[10px] font-mono text-slate-500">DISCORD CHANNEL IDS (COMMA-SEPARATED)</label>
+                              <Input value={discordChannel} onChange={(e) => setDiscordChannel(e.target.value)} placeholder="e.g., 104239840239480, 104239840239481" className="bg-slate-950 border-slate-900 text-xs" />
                             </div>
                             <div className="space-y-1">
                               <label className="text-[10px] font-mono text-slate-500">BOT ACCESS TOKEN</label>

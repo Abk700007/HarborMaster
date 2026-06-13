@@ -34,11 +34,8 @@ yarn-error.log*
 .env*
 !.env.example
 
-# local Coral generated source specs
-.coral/generated/
-.coral/live-data/
-.coral/telemetry/
-.coral/.lock
+# local Coral generated files & workspace runtime
+/.coral
 
 # Coral binary (too large for git)
 /bin/coral.exe

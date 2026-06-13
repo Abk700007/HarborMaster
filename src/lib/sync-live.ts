@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { DATA_DIR } from "./coral";
 
-export async function syncLiveWorkspace(config: any): Promise<void> {
+export async function syncLiveWorkspace(config: any, force = false): Promise<void> {
   const GITHUB_TOKEN = config.githubToken;
   const GITHUB_OWNER = config.githubOwner || "";
   const GITHUB_REPO = config.githubRepo || "";
@@ -10,10 +10,26 @@ export async function syncLiveWorkspace(config: any): Promise<void> {
   const DISCORD_CHANNEL_ID = config.discordChannel || "";
   const NOTION_TOKEN = config.notionToken;
 
-  console.log("--- Starting Live Data Sync Engine ---");
-
   // Ensure top-level directory exists
   await fs.mkdir(DATA_DIR, { recursive: true });
+
+  const lastSyncFile = path.join(DATA_DIR, "last_sync.json");
+  if (!force) {
+    try {
+      const lastSyncData = await fs.readFile(lastSyncFile, "utf-8");
+      const { timestamp } = JSON.parse(lastSyncData);
+      const ageMs = Date.now() - timestamp;
+      // 2 minutes cache
+      if (ageMs < 2 * 60 * 1000) {
+        console.log(`[Sync Engine] Live data was synced ${Math.round(ageMs / 1000)}s ago. Skipping sync.`);
+        return;
+      }
+    } catch (e) {
+      // Cache file doesn't exist or is invalid, proceed with sync
+    }
+  }
+
+  console.log("--- Starting Live Data Sync Engine ---");
 
   // 1. GITHUB SYNC
   const githubDir = path.join(DATA_DIR, "github_live");
@@ -184,5 +200,12 @@ export async function syncLiveWorkspace(config: any): Promise<void> {
     }
   } else {
     await fs.writeFile(notionFile, "", "utf-8");
+  }
+
+  try {
+    const lastSyncFile = path.join(DATA_DIR, "last_sync.json");
+    await fs.writeFile(lastSyncFile, JSON.stringify({ timestamp: Date.now() }), "utf-8");
+  } catch (e) {
+    console.warn("Failed to write last_sync.json timestamp:", e);
   }
 }

@@ -2,7 +2,7 @@
 name: discord
 version: 0.1.0
 dsl_version: 3
-backend: jsonl
+backend: file
 test_queries:
   - SELECT id, content FROM discord.messages LIMIT 1
 inputs:
@@ -12,8 +12,9 @@ inputs:
 tables:
   - name: messages
     description: Live Discord messages from community channels.
+    format: jsonl
     source:
-      location: "{{input.DISCORD_DATA_DIR}}/discord/"
+      location: "file:///{{input.DISCORD_DATA_DIR}}/discord/"
       glob: "*.jsonl"
     columns:
       - name: id
@@ -23,13 +24,7 @@ tables:
       - name: content
         type: Utf8
       - name: timestamp
-        type: Timestamp
-        expr:
-          kind: format_timestamp
-          input: iso8601
-          expr:
-            kind: path
-            path: [timestamp]
+        type: Utf8
       - name: author__id
         type: Utf8
       - name: author__username
