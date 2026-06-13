@@ -2,11 +2,11 @@
 SELECT
   gh.id AS pr_number,
   gh.title AS pr_title,
-  gh.ci_state,
+  gh.draft,
   dc.content AS community_signal,
   no.title AS release_note
-FROM hm_github.pull_requests gh
-LEFT JOIN hm_discord.messages dc ON dc.issue_key = gh.issue_key
-LEFT JOIN hm_notion.pages no ON no.issue_key = gh.issue_key
-WHERE gh.review_state = 'changes_requested' OR gh.ci_state = 'failed'
+FROM hm_github_live.pull_requests gh
+LEFT JOIN discord.messages dc ON dc.content LIKE '%' || gh.id || '%'
+LEFT JOIN hm_notion_live.pages no ON no.title LIKE '%' || gh.title || '%'
+WHERE gh.draft = true OR gh.state = 'open'
 ORDER BY gh.updated_at DESC;

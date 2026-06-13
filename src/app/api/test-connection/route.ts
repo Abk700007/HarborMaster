@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { generateText } from "ai";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { cookies } from "next/headers";
 
 const CONFIG_PATH = path.join(process.cwd(), "harbormaster.config.json");
 
@@ -10,11 +11,32 @@ export const runtime = "nodejs";
 
 async function getStoredSecret(key: string): Promise<string> {
   try {
+    const cookieStore = await cookies();
+    const cookieMap: Record<string, string> = {
+      githubToken: "harbormaster_github_token",
+      discordToken: "harbormaster_discord_token",
+      notionToken: "harbormaster_notion_token",
+      geminiKey: "harbormaster_gemini_key",
+    };
+    const cookieName = cookieMap[key];
+    if (cookieName) {
+      const val = cookieStore.get(cookieName)?.value;
+      if (val) return val;
+    }
+  } catch (e) {}
+
+  try {
     const data = await fs.readFile(CONFIG_PATH, "utf-8");
     const json = JSON.parse(data);
     return json[key] || "";
   } catch (e) {
-    return "";
+    try {
+      const data = await fs.readFile("/tmp/harbormaster.config.json", "utf-8");
+      const json = JSON.parse(data);
+      return json[key] || "";
+    } catch (err) {
+      return "";
+    }
   }
 }
 
@@ -84,6 +106,33 @@ export async function POST(request: Request) {
         ok: true,
         message: `Successfully connected to channel #${data.name || channelId}!`,
       });
+    }
+
+    if (sourceType === "notion") {
+      let token = payload.notionToken;
+      if (token === "••••••••") {
+        token = await getStoredSecret("notionToken");
+      }
+      if (!token) {
+        return NextResponse.json({ ok: false, error: "Missing Notion integration token" });
+      }
+
+      const res = await fetch("https://api.notion.com/v1/search", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Notion-Version": "2022-06-28",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ page_size: 1 }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        return NextResponse.json({ ok: false, error: err.message || `Notion error: ${res.statusText}` });
+      }
+
+      return NextResponse.json({ ok: true, message: "Successfully connected to Notion Workspace!" });
     }
 
     if (sourceType === "gemini") {

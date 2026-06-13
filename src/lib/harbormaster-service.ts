@@ -1,95 +1,127 @@
-import type { ActionItem, BriefResponse, ChatResponse, EvidenceItem, SourceStatus } from "./harbormaster-types";
+import type { ActionItem, BriefResponse, ChatResponse, EvidenceItem, RiskRow, SourceStatus } from "./harbormaster-types";
 import { listCoralSources, runCoralSql } from "./coral";
-import { buildDemoBrief, buildDemoChat, demoSources } from "./demo-data";
 import { sqlPlaybooks } from "./sql-playbooks";
 import { generateText } from "ai";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import fs from "node:fs/promises";
 import path from "node:path";
 
-async function getConfig() {
+async function getEffectiveConfig(passedConfig: any = {}) {
+  if (passedConfig && (passedConfig.githubToken || passedConfig.discordToken || passedConfig.notionToken)) {
+    return passedConfig;
+  }
   try {
     const data = await fs.readFile(path.join(process.cwd(), "harbormaster.config.json"), "utf-8");
-    return JSON.parse(data);
+    return { ...JSON.parse(data), ...passedConfig };
   } catch (e) {
-    return {};
+    try {
+      const data = await fs.readFile("/tmp/harbormaster.config.json", "utf-8");
+      return { ...JSON.parse(data), ...passedConfig };
+    } catch (err) {
+      return passedConfig;
+    }
   }
 }
 
 type CoralBriefRow = {
-  id: string;
-  title: string;
-  issue_key: string;
-  status: string;
-  review_state: string;
-  ci_state: string;
+  pr_number: string;
+  pr_title: string;
+  pr_status: string;
+  author: string;
   community_signal?: string | null;
   roadmap_item?: string | null;
 };
 
-const enabled = () => process.env.HARBORMASTER_USE_CORAL === "1";
+export async function getBrief(passedConfig: any = {}): Promise<BriefResponse> {
+  const config = await getEffectiveConfig(passedConfig);
+  const result = await runCoralSql<CoralBriefRow>(sqlPlaybooks.morningBrief, config);
+  const statuses = await getSourceStatuses(config);
 
-export async function getBrief(): Promise<BriefResponse> {
-  if (!enabled()) {
-    return buildDemoBrief("Demo preview is active. Set HARBORMASTER_USE_CORAL=1 after installing the Coral demo sources.");
+  let actions: ActionItem[] = [];
+  let notice: string | undefined;
+
+  if (!result.ok) {
+    notice = `Failed to query Coral workspace: ${result.error}`;
+  } else {
+    actions = result.rows.map(rowToAction);
   }
 
-  const result = await runCoralSql<CoralBriefRow>(sqlPlaybooks.morningBrief);
-
-  if (!result.ok || result.rows.length === 0) {
-    return buildDemoBrief(
-      `Coral mode was requested, but the morning brief query could not return rows: ${
-        result.ok ? "no rows" : result.error
-      }`
-    );
+  // Generate live risks from the active releaseRisk query results
+  let risks: RiskRow[] = [];
+  const riskResult = await runCoralSql<any>(sqlPlaybooks.releaseRisk, config);
+  if (riskResult.ok) {
+    risks = riskResult.rows.map((row: any, idx: number) => ({
+      id: `risk-${idx + 1}`,
+      surface: "Live Release Work",
+      blocker: row.draft ? "PR is Draft" : "Review pending",
+      linkedWork: `PR #${row.pr_number}`,
+      impact: row.community_signal || "Linked PR is blocking release path.",
+      score: row.draft ? 85 : 72,
+      sources: ["GitHub"],
+    }));
   }
-
-  const actions = result.rows.map(rowToAction);
-  const statuses = await getSourceStatuses();
 
   return {
-    ...buildDemoBrief(),
     mode: "coral-live",
     generatedAt: new Date().toISOString(),
     sourceStatuses: statuses,
     actions,
-    queryCount: 1,
-    latencyMs: result.durationMs,
-    notice: undefined,
+    risks,
+    queryCount: 2,
+    cacheHitRate: 0,
+    latencyMs: result.durationMs + (riskResult.durationMs || 0),
+    sql: sqlPlaybooks,
+    notice,
   };
 }
 
-export async function getSourceStatuses(): Promise<SourceStatus[]> {
-  if (!enabled()) {
-    return demoSources;
-  }
-
-  const sources = await listCoralSources();
-  if (!sources.ok) {
-    return demoSources.map((source) => ({
-      ...source,
+export async function getSourceStatuses(passedConfig: any = {}): Promise<SourceStatus[]> {
+  const config = await getEffectiveConfig(passedConfig);
+  const baseSources: SourceStatus[] = [
+    {
+      id: "github",
+      label: "GitHub",
+      schema: "hm_github_live",
       status: "missing",
-      description: `Coral source list failed: ${sources.error}`,
-    }));
+      tables: 1,
+      latencyMs: 0,
+      description: "Live GitHub pull requests, commits, and checks",
+    },
+    {
+      id: "discord",
+      label: "Discord",
+      schema: "discord",
+      status: "missing",
+      tables: 1,
+      latencyMs: 0,
+      description: "Live Discord messages from your community channels",
+    },
+    {
+      id: "notion",
+      label: "Notion",
+      schema: "hm_notion_live",
+      status: "missing",
+      tables: 1,
+      latencyMs: 0,
+      description: "Live Notion workspace page checklist documentation",
+    },
+  ];
+
+  const sources = await listCoralSources(config);
+  if (!sources.ok) {
+    return baseSources;
   }
 
   const raw = sources.rows[0]?.raw ?? "";
-  return demoSources.map((source) => ({
+  return baseSources.map((source) => ({
     ...source,
     status: raw.includes(source.schema) ? "live" : "missing",
     latencyMs: sources.durationMs,
   }));
 }
 
-export async function answerQuestion(question: string): Promise<ChatResponse> {
-  const fallback = buildDemoChat(question);
-  const config = await getConfig();
-
-  // If Coral isn't enabled, return the mock preview right away
-  if (!enabled()) {
-    return fallback;
-  }
-
+export async function answerQuestion(question: string, passedConfig: any = {}): Promise<ChatResponse> {
+  const config = await getEffectiveConfig(passedConfig);
   let sql = chooseSql(question);
   let finalAnswer = "";
   let queryRunSucceeded = false;
@@ -102,6 +134,7 @@ export async function answerQuestion(question: string): Promise<ChatResponse> {
       
       const hasLiveGithub = !!(config.githubToken && config.githubOwner && config.githubRepo);
       const hasLiveDiscord = !!(config.discordToken && config.discordChannel);
+      const hasLiveNotion = !!config.notionToken;
 
       const schemasPrompt = `
 You are an expert SQL generator for the Coral Query Engine.
@@ -109,35 +142,7 @@ Coral allows joining multiple data sources (GitHub, Discord, Notion) as SQL tabl
 
 Here are the available schemas and tables in the system:
 
-1. Local Demo Schemas (Use these for general queries or if live credentials are not set):
-   - hm_github.pull_requests:
-     - id (Utf8) - PR ID (e.g. pr-184)
-     - title (Utf8)
-     - issue_key (Utf8) - references common join key (e.g. key-431)
-     - status (Utf8) - 'open', 'merged', etc.
-     - review_state (Utf8) - 'changes_requested', 'review_requested', 'approved', 'none'
-     - ci_state (Utf8) - 'failed', 'passed', 'not_applicable'
-     - updated_at (Utf8)
-     - author (Utf8)
-     - url (Utf8)
-   - hm_notion.pages:
-     - id (Utf8)
-     - title (Utf8)
-     - issue_key (Utf8) - references common join key
-     - status (Utf8)
-     - last_edited (Utf8)
-     - url (Utf8)
-     - content (Utf8)
-   - hm_discord.messages:
-     - id (Utf8)
-     - channel_name (Utf8)
-     - author_name (Utf8)
-     - content (Utf8)
-     - issue_key (Utf8) - references common join key
-     - created_at (Utf8)
-     - sentiment (Utf8) - 'blocked', 'negative', 'neutral', 'positive'
-
-2. Live Schemas:
+1. Live Schemas:
    ${hasLiveGithub ? `- hm_github_live.pull_requests:
      - id (Utf8) - represents PR number
      - title (Utf8)
@@ -157,17 +162,22 @@ Here are the available schemas and tables in the system:
      - author__id (Utf8)
      - author__username (Utf8)
      - mention_usernames (Utf8)` : "*(Discord live schema not configured)*"}
+   ${hasLiveNotion ? `- hm_notion_live.pages:
+     - id (Utf8)
+     - title (Utf8)
+     - last_edited (Utf8)
+     - url (Utf8)` : "*(Notion live schema not configured)*"}
 
 Write a standard SQL query for the following user question:
 "${question}"
 
 Rules:
 - Output ONLY the raw SQL query. Do NOT wrap it in any explanation or markdown code blocks (like \`\`\`sql).
-- If the user asks about live GitHub PRs, use 'hm_github_live.pull_requests' (only if configured).
-- If the user asks about live Discord messages, use 'discord.messages' (only if configured).
-- If the question is about Notion, use the local demo tables (e.g. 'hm_notion.pages', 'hm_github.pull_requests', 'hm_discord.messages').
+- If the user asks about GitHub PRs, use 'hm_github_live.pull_requests'.
+- If the user asks about Discord messages, use 'discord.messages'.
+- If the user asks about Notion pages, use 'hm_notion_live.pages'.
 - Limit results (e.g. LIMIT 5) to keep it fast.
-- Ensure the query has valid JOIN conditions if querying multiple tables.
+- Ensure the query has valid JOIN conditions if querying multiple tables. Use LIKE joins: e.g. ON dc.content LIKE '%' || gh.id || '%' if joining Discord messages to GitHub PR numbers.
 `;
 
       const aiSqlResponse = await generateText({
@@ -179,7 +189,7 @@ Rules:
       
       if (generatedSql.startsWith("SELECT") || generatedSql.startsWith("select")) {
         sql = generatedSql;
-        const result = await runCoralSql<any>(sql);
+        const result = await runCoralSql<any>(sql, config);
         if (result.ok && result.rows.length > 0) {
           queryRunSucceeded = true;
           rows = result.rows;
@@ -193,24 +203,16 @@ Rules:
 
   // If dynamic query failed or Gemini key wasn't supplied, run the playbook SQL
   if (!queryRunSucceeded) {
-    const result = await runCoralSql<Record<string, unknown>>(sql);
-    if (result.ok && result.rows.length > 0) {
+    const result = await runCoralSql<Record<string, unknown>>(sql, config);
+    if (result.ok) {
       rows = result.rows;
       durationMs = result.durationMs;
       queryRunSucceeded = true;
     }
   }
 
-  // If no queries returned data, fallback to demo mode
-  if (!queryRunSucceeded || rows.length === 0) {
-    return {
-      ...fallback,
-      answer: `${fallback.answer} (Coral did not return data; using fallback preview).`,
-    };
-  }
-
   // Synthesize answer using Gemini if key is active
-  if (config.geminiKey) {
+  if (config.geminiKey && rows.length > 0) {
     try {
       const google = createGoogleGenerativeAI({ apiKey: config.geminiKey });
       const prompt = `You are HarborMaster, a helpful AI first mate for open-source project maintainers.
@@ -228,18 +230,24 @@ Please write a concise, helpful, and natural answer (1-3 sentences) based STRICT
 
       finalAnswer = aiResponse.text.trim();
     } catch (e) {
-      finalAnswer = `Coral returned ${rows.length} rows (query duration: ${durationMs}ms). Highest priority item matches: ${fallback.answer}`;
+      finalAnswer = `Coral returned ${rows.length} rows (query duration: ${durationMs}ms).`;
     }
   } else {
-    finalAnswer = `Coral returned ${rows.length} rows (query duration: ${durationMs}ms). Configure a Gemini API Key in Settings to enable natural language summaries.`;
+    finalAnswer = rows.length > 0 
+      ? `Coral returned ${rows.length} rows (query duration: ${durationMs}ms). Configure a Gemini API Key in Settings to enable natural language summaries.`
+      : `No matching records found in the live workspace database. Make sure your GitHub repos, Discord bot, and Notion integrations are configured.`;
   }
 
   return {
-    ...fallback,
     mode: "coral-live",
     sql,
     evidence: rowsToEvidence(rows),
     answer: finalAnswer,
+    followups: [
+      "Show me the latest open pull requests.",
+      "Check recent Discord community support messages.",
+      "What docs pages exist in my Notion workspace?"
+    ],
   };
 }
 
@@ -256,13 +264,13 @@ function chooseSql(question: string) {
 }
 
 function rowToAction(row: CoralBriefRow): ActionItem {
-  const score = row.ci_state === "failed" ? 97 : row.review_state === "changes_requested" ? 88 : 72;
+  const score = row.pr_status === "closed" ? 60 : 88;
   const evidence: EvidenceItem[] = [
     {
       source: "GitHub",
-      label: `PR #${row.id.replace("pr-", "")}`,
-      excerpt: `${row.title} has CI state ${row.ci_state} and review state ${row.review_state}.`,
-      ref: row.id,
+      label: `PR #${row.pr_number}`,
+      excerpt: `${row.pr_title} (Author: ${row.author || "maintainer"}) is currently ${row.pr_status}.`,
+      ref: `https://github.com/${row.author || "maintainer"}/repo/pull/${row.pr_number}`,
       time: "live",
     },
   ];
@@ -270,9 +278,9 @@ function rowToAction(row: CoralBriefRow): ActionItem {
   if (row.community_signal) {
     evidence.push({
       source: "Discord",
-      label: "Community signal",
+      label: "Discord Context",
       excerpt: row.community_signal,
-      ref: row.issue_key,
+      ref: "discord",
       time: "live",
     });
   }
@@ -280,25 +288,27 @@ function rowToAction(row: CoralBriefRow): ActionItem {
   if (row.roadmap_item) {
     evidence.push({
       source: "Notion",
-      label: "Roadmap details",
+      label: "Notion Roadmap",
       excerpt: row.roadmap_item,
-      ref: row.issue_key,
+      ref: "notion",
       time: "live",
     });
   }
 
   return {
-    id: row.id,
-    title: row.title,
-    category: row.ci_state === "failed" ? "Fix" : "Review",
-    priority: score > 90 ? "Critical" : score > 80 ? "High" : "Medium",
+    id: `act-${row.pr_number}`,
+    title: row.pr_title,
+    category: row.pr_status === "open" ? "Review" : "Ship",
+    priority: score > 80 ? "High" : "Medium",
     score,
-    status: row.ci_state === "failed" ? "CI failing" : row.review_state,
+    status: row.pr_status === "open" ? "Open" : "Merged",
     due: "Today",
-    owner: "You",
-    summary: `Coral joined ${row.issue_key} across GitHub, Discord, and Notion to rank this work.`,
+    owner: row.author || "You",
+    summary: `Coral cross-source federated action unifies contexts for PR #${row.pr_number}.`,
     sqlKey: "morningBrief",
-    links: [],
+    links: [
+      { label: `PR #${row.pr_number}`, href: `https://github.com/${row.author || "maintainer"}/repo/pull/${row.pr_number}` }
+    ],
     evidence,
   };
 }
@@ -312,20 +322,15 @@ function rowsToEvidence(rows: Record<string, unknown>[]): EvidenceItem[] {
       source = "Notion";
     }
     
-    // Label
-    const label = String(row.issue_key || row.key || row.id || `Ref-${index + 1}`);
-    
-    // Excerpt
+    const label = String(row.pr_number || row.id || `Ref-${index + 1}`);
     const excerpt = String(
+      row.pr_title || 
       row.title || 
       row.content || 
       row.text || 
-      row.community_signal || 
       JSON.stringify(row)
     );
-    
-    // Ref
-    const ref = String(row.url || row.html_url || row.ref || `id-${index + 1}`);
+    const ref = String(row.html_url || row.url || `id-${index + 1}`);
 
     return {
       source,

@@ -2,10 +2,9 @@
 SELECT
   gh.id AS pr_number,
   gh.title AS pr_title,
-  gh.url,
-  gh.author,
-  gh.review_state,
-  gh.ci_state
-FROM hm_github.pull_requests gh
-WHERE gh.review_state IN ('changes_requested', 'review_requested')
+  gh.html_url AS url,
+  gh.author_login AS author,
+  gh.state AS review_state
+FROM hm_github_live.pull_requests gh
+WHERE gh.state = 'open'
 ORDER BY gh.updated_at DESC;

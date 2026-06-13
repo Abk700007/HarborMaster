@@ -71,7 +71,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { buildDemoBrief, buildDemoChat } from "@/lib/demo-data";
 import { sqlPlaybooks } from "@/lib/sql-playbooks";
 import type { ActionItem, BriefResponse, ChatMessage, ChatResponse, EvidenceItem, RiskRow, SourceStatus } from "@/lib/harbormaster-types";
 import { cn } from "@/lib/utils";
@@ -247,19 +246,34 @@ export function HarborMasterApp() {
 
   // Testing states
   const [testingConnection, setTestingConnection] = useState(false);
+  const [oauthEnabled, setOauthEnabled] = useState(false);
+  const [githubPatInput, setGithubPatInput] = useState("");
+  const [userRepos, setUserRepos] = useState<{ name: string; owner: string; fullName: string }[]>([]);
+  const [loadingRepos, setLoadingRepos] = useState(false);
 
   // Dashboard Data State
   const [brief, setBrief] = useState<BriefResponse>(() => ({
-    ...buildDemoBrief(),
+    mode: "coral-live",
     generatedAt: new Date().toISOString(),
+    sourceStatuses: [
+      { id: "github", label: "GitHub", schema: "hm_github_live", status: "missing", tables: 1, latencyMs: 0, description: "Live GitHub pull requests, commits, and checks" },
+      { id: "discord", label: "Discord", schema: "discord", status: "missing", tables: 1, latencyMs: 0, description: "Live Discord messages from your community channels" },
+      { id: "notion", label: "Notion", schema: "hm_notion_live", status: "missing", tables: 1, latencyMs: 0, description: "Live Notion workspace page checklist documentation" },
+    ],
+    actions: [],
+    risks: [],
+    queryCount: 0,
+    cacheHitRate: 0,
+    latencyMs: 0,
+    sql: sqlPlaybooks,
   }));
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: "assistant",
       content:
-        "Morning brief ready. Your highest leverage move is resolving the OAuth token expiration bug. Under the hood, Coral SQL has joined failing pull requests, Discord user support logs, and Notion roadmap items to confirm this blocks your upcoming v1.4 release.",
-      sql: buildDemoChat("next").sql,
-      evidence: buildDemoChat("next").evidence,
+        "Welcome to HarborMaster! Connect your GitHub repositories, Discord text channels, and Notion workspace to generate your first live cross-source morning brief and run Coral federated SQL queries.",
+      sql: "",
+      evidence: [],
     },
   ]);
   const [question, setQuestion] = useState("");
@@ -296,25 +310,106 @@ export function HarborMasterApp() {
 
   // Check state persistence on mount
   useEffect(() => {
-    const storedStage = localStorage.getItem("hm_stage") as any;
-    if (storedStage) {
-      setStage(storedStage);
+    // Check if GitHub OAuth is enabled on the server
+    fetch("/api/auth/github/config")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.oauthEnabled) {
+          setOauthEnabled(true);
+        }
+      })
+      .catch((err) => console.error("Could not check OAuth config", err));
+
+    // Parse cookies to load credentials statelessly
+    const cookiesObj = document.cookie.split("; ").reduce((acc, c) => {
+      const [k, v] = c.split("=");
+      if (k && v) acc[k] = decodeURIComponent(v);
+      return acc;
+    }, {} as Record<string, string>);
+
+    const gToken = cookiesObj["harbormaster_github_token"] || "";
+    const gOwner = cookiesObj["harbormaster_github_owner"] || cookiesObj["harbormaster_github_user"] || "";
+    const gRepo = cookiesObj["harbormaster_github_repo"] || "";
+    const dToken = cookiesObj["harbormaster_discord_token"] || "";
+    const dChan = cookiesObj["harbormaster_discord_channel"] || "";
+    const nToken = cookiesObj["harbormaster_notion_token"] || "";
+    const gKey = cookiesObj["harbormaster_gemini_key"] || "";
+
+    if (gToken) {
+      setGithubToken(gToken);
+      setGithubSyncOk(true);
     }
-    // Load config secrets
+    if (gOwner) setGithubOwner(gOwner);
+    if (gRepo) setGithubRepo(gRepo);
+    if (dToken) {
+      setDiscordToken(dToken);
+      setDiscordSyncOk(true);
+    }
+    if (dChan) setDiscordChannel(dChan);
+    if (nToken) {
+      setNotionToken(nToken);
+      setNotionSyncOk(true);
+    }
+    if (gKey) setGeminiKey(gKey);
+
+    // Also fetch from API settings for fallback
     fetch("/api/settings")
       .then((res) => res.json())
       .then((data) => {
-        if (data.geminiKey) setGeminiKey(data.geminiKey);
-        if (data.githubToken) setGithubToken(data.githubToken);
+        if (data.geminiKey && data.geminiKey !== "••••••••") setGeminiKey(data.geminiKey);
+        if (data.githubToken && data.githubToken !== "••••••••") {
+          setGithubToken(data.githubToken);
+          setGithubSyncOk(true);
+        }
         if (data.githubOwner) setGithubOwner(data.githubOwner);
         if (data.githubRepo) setGithubRepo(data.githubRepo);
-        if (data.discordToken) setDiscordToken(data.discordToken);
+        if (data.discordToken && data.discordToken !== "••••••••") {
+          setDiscordToken(data.discordToken);
+          setDiscordSyncOk(true);
+        }
         if (data.discordChannel) setDiscordChannel(data.discordChannel);
+        if (data.notionToken && data.notionToken !== "••••••••") {
+          setNotionToken(data.notionToken);
+          setNotionSyncOk(true);
+        }
       })
       .catch((err) => console.error("Could not load credentials", err));
 
+    // Handle OAuth redirect callback
+    const params = new URLSearchParams(window.location.search);
+    const stageParam = params.get("stage");
+    if (stageParam === "onboarding") {
+      setStage("onboarding");
+      setOnboardingStep(1); // Go straight to onboarding
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else {
+      const storedStage = localStorage.getItem("hm_stage") as any;
+      if (storedStage) {
+        setStage(storedStage);
+      }
+    }
+
     void refreshBrief();
   }, []);
+
+  // Load user repositories dynamically once authenticated
+  useEffect(() => {
+    if (githubToken && stage === "onboarding" && onboardingStep === 2) {
+      setLoadingRepos(true);
+      fetch("/api/github/repos")
+        .then((res) => {
+          if (res.ok) return res.json();
+          throw new Error("Failed to load repositories");
+        })
+        .then((data) => {
+          if (Array.isArray(data)) {
+            setUserRepos(data);
+          }
+        })
+        .catch((err) => console.error("Could not fetch user repos:", err))
+        .finally(() => setLoadingRepos(false));
+    }
+  }, [githubToken, stage, onboardingStep]);
 
   const transitionToStage = (newStage: "landing" | "auth" | "onboarding" | "dashboard") => {
     setStage(newStage);
@@ -328,6 +423,32 @@ export function HarborMasterApp() {
     setGithubSyncOk(false);
     setDiscordSyncOk(false);
     setNotionSyncOk(false);
+    
+    // Reset state credentials
+    setGeminiKey("");
+    setGithubToken("");
+    setGithubOwner("");
+    setGithubRepo("");
+    setDiscordToken("");
+    setDiscordChannel("");
+    setNotionToken("");
+    setGithubPatInput("");
+
+    // Clear cookies
+    const cookiesToClear = [
+      "harbormaster_github_token",
+      "harbormaster_github_owner",
+      "harbormaster_github_user",
+      "harbormaster_github_repo",
+      "harbormaster_discord_token",
+      "harbormaster_discord_channel",
+      "harbormaster_notion_token",
+      "harbormaster_gemini_key"
+    ];
+    cookiesToClear.forEach((name) => {
+      document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+    });
+
     showToast("Application stage reset to Landing Page", "info");
   };
 
@@ -368,7 +489,11 @@ export function HarborMasterApp() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question: trimmed }),
       });
-      const answer: ChatResponse = response.ok ? ((await response.json()) as ChatResponse) : buildDemoChat(trimmed);
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(errText || "Failed to fetch answer");
+      }
+      const answer = (await response.json()) as ChatResponse;
       setMessages((current) => [
         ...current,
         {
@@ -378,6 +503,17 @@ export function HarborMasterApp() {
           evidence: answer.evidence,
         },
       ]);
+    } catch (err: any) {
+      setMessages((current) => [
+        ...current,
+        {
+          role: "assistant",
+          content: `Error asking HarborMaster: ${err.message || String(err)}`,
+          sql: "",
+          evidence: [],
+        },
+      ]);
+      void showToast("Chat request failed", "error");
     } finally {
       setAsking(false);
     }
@@ -506,13 +642,15 @@ export function HarborMasterApp() {
   }
 
   // Trigger test-connection in onboarding or settings
-  async function runTestConnection(type: "github" | "discord" | "gemini") {
+  async function runTestConnection(type: "github" | "discord" | "gemini" | "notion") {
     setTestingConnection(true);
     let payload = {};
     if (type === "github") {
       payload = { githubToken, githubOwner, githubRepo };
     } else if (type === "discord") {
       payload = { discordToken, discordChannel };
+    } else if (type === "notion") {
+      payload = { notionToken };
     } else {
       payload = { geminiKey };
     }
@@ -525,9 +663,10 @@ export function HarborMasterApp() {
       });
       const data = await res.json();
       if (res.ok && data.ok) {
-        showToast(`Connected to ${type} successfully!`, "success");
+        showToast(data.message || `Connected to ${type} successfully!`, "success");
         if (type === "github") setGithubSyncOk(true);
         if (type === "discord") setDiscordSyncOk(true);
+        if (type === "notion") setNotionSyncOk(true);
       } else {
         showToast(data.error || `Connection to ${type} failed`, "error");
       }
@@ -601,6 +740,7 @@ export function HarborMasterApp() {
           githubRepo,
           discordToken,
           discordChannel,
+          notionToken,
         }),
       });
       if (res.ok) {
@@ -1141,11 +1281,73 @@ export function HarborMasterApp() {
                 To continue onboarding your HarborMaster agent, authenticate with your developer credentials.
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-0">
-              <Button className="w-full py-5 bg-slate-950 hover:bg-[#121629] border border-white/[0.04] text-sm font-medium text-white flex items-center justify-center gap-2 rounded-lg transition-all duration-200" onClick={() => transitionToStage("onboarding")}>
-                <Github className="size-4" />
-                Continue with GitHub
-              </Button>
+            <CardContent className="p-0 space-y-4">
+              {oauthEnabled ? (
+                <Button 
+                  className="w-full py-5 bg-slate-950 hover:bg-[#121629] border border-white/[0.04] text-sm font-medium text-white flex items-center justify-center gap-2 rounded-lg transition-all duration-200 shadow-sm"
+                  onClick={() => {
+                    window.location.href = "/api/auth/github/login";
+                  }}
+                >
+                  <Github className="size-4" />
+                  Continue with GitHub (OAuth)
+                </Button>
+              ) : (
+                <div className="space-y-3">
+                  <div className="space-y-1 text-left">
+                    <label className="text-[10px] font-mono text-slate-500 uppercase block tracking-wider">GitHub Personal Access Token (PAT)</label>
+                    <Input 
+                      type="password" 
+                      placeholder="ghp_..." 
+                      value={githubPatInput} 
+                      onChange={(e) => setGithubPatInput(e.target.value)} 
+                      className="bg-slate-950 border-slate-900 text-xs focus-visible:ring-teal-500/20 text-white placeholder:text-slate-600 h-9" 
+                    />
+                    <p className="text-[9px] text-slate-500 font-sans leading-normal mt-1">
+                      OAuth is not configured. Enter a classic GitHub PAT with <code className="text-teal-400 font-mono">repo</code> scope.
+                    </p>
+                  </div>
+                  {testingConnection && (
+                    <div className="text-[10px] text-teal-400 flex items-center gap-1.5 font-mono justify-center animate-pulse">
+                      <Loader2 className="size-3 animate-spin" /> Verifying token...
+                    </div>
+                  )}
+                  <Button 
+                    className="w-full py-2.5 bg-teal-500/10 border border-teal-500/30 text-teal-300 hover:bg-teal-500/20 text-xs font-semibold rounded-lg transition-all duration-200" 
+                    disabled={testingConnection}
+                    onClick={async () => {
+                      if (!githubPatInput) {
+                        void showToast("Please enter a GitHub token", "error");
+                        return;
+                      }
+                      setTestingConnection(true);
+                      try {
+                        const res = await fetch("/api/auth/github/pat-login", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ token: githubPatInput }),
+                        });
+                        const data = await res.json();
+                        if (res.ok && data.ok) {
+                          setGithubToken(githubPatInput);
+                          setGithubOwner(data.username);
+                          setGithubSyncOk(true);
+                          void showToast(`Authenticated as @${data.username}`, "success");
+                          transitionToStage("onboarding");
+                        } else {
+                          void showToast(data.error || "Invalid token", "error");
+                        }
+                      } catch (err) {
+                        void showToast("Verification failed", "error");
+                      } finally {
+                        setTestingConnection(false);
+                      }
+                    }}
+                  >
+                    Authenticate & Log In
+                  </Button>
+                </div>
+              )}
             </CardContent>
             <CardFooter className="p-0 text-center flex flex-col space-y-2 border-t-0 bg-transparent">
               <div className="flex items-center gap-1.5 justify-center text-[10px] text-slate-500 font-mono">
@@ -1286,24 +1488,65 @@ export function HarborMasterApp() {
 
                       <div className="space-y-3">
                         <div className="space-y-1">
-                          <label className="text-[10px] font-mono text-slate-400 flex justify-between">
-                            <span>OWNER / ORGANIZATION</span>
-                            <span className="text-[9px] text-slate-500 lowercase">e.g. vercel</span>
-                          </label>
-                          <Input placeholder="e.g., vercel" value={githubOwner} onChange={(e) => setGithubOwner(e.target.value)} className="bg-slate-950 border-slate-900 text-xs focus-visible:ring-teal-500/20 text-white placeholder:text-slate-600" />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-mono text-slate-400 flex justify-between">
-                            <span>REPOSITORY NAME</span>
-                            <span className="text-[9px] text-slate-500 lowercase">e.g. next.js</span>
-                          </label>
-                          <Input placeholder="e.g., next.js" value={githubRepo} onChange={(e) => setGithubRepo(e.target.value)} className="bg-slate-950 border-slate-900 text-xs focus-visible:ring-teal-500/20 text-white placeholder:text-slate-600" />
-                        </div>
-                        <div className="space-y-1">
                           <label className="text-[10px] font-mono text-slate-400">PERSONAL ACCESS TOKEN (CLASSIC)</label>
                           <Input type="password" placeholder="ghp_..." value={githubToken} onChange={(e) => setGithubToken(e.target.value)} className="bg-slate-950 border-slate-900 text-xs focus-visible:ring-teal-500/20 text-white placeholder:text-slate-600" />
-                          <p className="text-[9px] text-slate-505 mt-1 leading-normal font-sans">Requires a classic GitHub token with <code className="text-teal-400 font-mono">repo</code> scope.</p>
+                          <p className="text-[9px] text-slate-500 mt-1 leading-normal font-sans">Requires a classic GitHub token with <code className="text-teal-400 font-mono">repo</code> scope.</p>
                         </div>
+                        
+                        {loadingRepos ? (
+                          <div className="py-2 flex items-center gap-1.5 text-xs text-slate-400 font-mono">
+                            <Loader2 className="size-3.5 animate-spin text-teal-400" /> Loading repositories...
+                          </div>
+                        ) : userRepos.length > 0 ? (
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-mono text-slate-400 flex justify-between">
+                              <span>SELECT REPOSITORY</span>
+                              <button 
+                                type="button"
+                                className="text-[9px] text-teal-400 underline hover:text-teal-300 font-sans"
+                                onClick={() => setUserRepos([])}
+                              >
+                                Enter manually
+                              </button>
+                            </label>
+                            <select
+                              className="w-full bg-slate-950 border border-slate-900 rounded-lg p-2 text-xs text-white focus-visible:ring-teal-500/20 h-9"
+                              value={githubOwner && githubRepo ? `${githubOwner}/${githubRepo}` : ""}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (val) {
+                                  const [owner, repo] = val.split("/");
+                                  setGithubOwner(owner);
+                                  setGithubRepo(repo);
+                                }
+                              }}
+                            >
+                              <option value="">-- Choose a Repository --</option>
+                              {userRepos.map((r) => (
+                                <option key={r.fullName} value={r.fullName}>
+                                  {r.fullName}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-mono text-slate-400 flex justify-between">
+                                <span>OWNER / ORGANIZATION</span>
+                                <span className="text-[9px] text-slate-500 lowercase">e.g. vercel</span>
+                              </label>
+                              <Input placeholder="e.g., vercel" value={githubOwner} onChange={(e) => setGithubOwner(e.target.value)} className="bg-slate-950 border-slate-900 text-xs focus-visible:ring-teal-500/20 text-white placeholder:text-slate-600" />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-mono text-slate-400 flex justify-between">
+                                <span>REPOSITORY NAME</span>
+                                <span className="text-[9px] text-slate-500 lowercase">e.g. next.js</span>
+                              </label>
+                              <Input placeholder="e.g., next.js" value={githubRepo} onChange={(e) => setGithubRepo(e.target.value)} className="bg-slate-950 border-slate-900 text-xs focus-visible:ring-teal-500/20 text-white placeholder:text-slate-600" />
+                            </div>
+                          </>
+                        )}
                       </div>
                     </div>
 
@@ -1760,9 +2003,9 @@ export function HarborMasterApp() {
                 <span className="text-[9.5px] font-mono font-bold text-slate-500 tracking-widest block uppercase">Active Pipelines</span>
                 <div className="space-y-2">
                   {[
-                    { name: "GitHub", connected: !!githubToken || brief.mode === "coral-live" || brief.mode === "demo-preview" },
-                    { name: "Discord", connected: !!discordToken || brief.mode === "coral-live" || brief.mode === "demo-preview" },
-                    { name: "Notion", connected: !!notionToken || brief.mode === "coral-live" || brief.mode === "demo-preview" },
+                    { name: "GitHub", connected: brief.sourceStatuses.find(s => s.id === "github")?.status === "live" },
+                    { name: "Discord", connected: brief.sourceStatuses.find(s => s.id === "discord")?.status === "live" },
+                    { name: "Notion", connected: brief.sourceStatuses.find(s => s.id === "notion")?.status === "live" },
                   ].map((src) => (
                     <div key={src.name} className="flex items-center justify-between text-[10.5px]">
                       <div className="flex items-center gap-2 text-slate-400">
@@ -1817,12 +2060,9 @@ export function HarborMasterApp() {
                 <span className="text-[10px] text-slate-600 font-mono">/</span>
                 <Badge
                   variant="outline"
-                  className={cn(
-                    "text-[9px] font-mono",
-                    brief.mode === "coral-live" ? "border-emerald-500/20 bg-emerald-500/5 text-emerald-400" : "border-amber-500/20 bg-amber-500/5 text-amber-400"
-                  )}
+                  className="text-[9px] font-mono border-emerald-500/20 bg-emerald-500/5 text-emerald-400"
                 >
-                  {brief.mode === "coral-live" ? "Live" : "Demo Preview"}
+                  Live Workspace
                 </Badge>
               </div>
 
@@ -2458,6 +2698,21 @@ export function HarborMasterApp() {
                                   Test
                                 </Button>
                               </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <Separator className="bg-white/[0.03]" />
+
+                        <div className="space-y-2">
+                          <h3 className="text-xs font-semibold text-white">Notion Workspace</h3>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-mono text-slate-500">INTEGRATION TOKEN</label>
+                            <div className="flex gap-2">
+                              <Input type="password" value={notionToken} onChange={(e) => setNotionToken(e.target.value)} placeholder="secret_..." className="bg-slate-950 border-slate-900 text-xs flex-1" />
+                              <Button type="button" variant="outline" className="border-slate-800 bg-slate-950 text-xs hover:bg-slate-900" onClick={() => runTestConnection("notion")}>
+                                Test
+                              </Button>
                             </div>
                           </div>
                         </div>

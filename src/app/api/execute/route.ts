@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { generateText } from "ai";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { cookies } from "next/headers";
 
 const CONFIG_PATH = path.join(process.cwd(), "harbormaster.config.json");
 
@@ -15,12 +16,33 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing actionType or payload" }, { status: 400 });
     }
 
-    // Read config
+    // Read config from cookies first
     let config: any = {};
     try {
-      const data = await fs.readFile(CONFIG_PATH, "utf-8");
-      config = JSON.parse(data);
+      const cookieStore = await cookies();
+      config = {
+        githubToken: cookieStore.get("harbormaster_github_token")?.value || "",
+        githubOwner: cookieStore.get("harbormaster_github_owner")?.value || "",
+        githubRepo: cookieStore.get("harbormaster_github_repo")?.value || "",
+        discordToken: cookieStore.get("harbormaster_discord_token")?.value || "",
+        discordChannel: cookieStore.get("harbormaster_discord_channel")?.value || "",
+        notionToken: cookieStore.get("harbormaster_notion_token")?.value || "",
+        geminiKey: cookieStore.get("harbormaster_gemini_key")?.value || "",
+      };
     } catch (e) {}
+
+    const hasCookies = config.githubToken || config.discordToken || config.notionToken;
+    if (!hasCookies) {
+      try {
+        const data = await fs.readFile(CONFIG_PATH, "utf-8");
+        config = JSON.parse(data);
+      } catch (e) {
+        try {
+          const data = await fs.readFile("/tmp/harbormaster.config.json", "utf-8");
+          config = JSON.parse(data);
+        } catch (err) {}
+      }
+    }
 
     const isDraft = !!draft;
 

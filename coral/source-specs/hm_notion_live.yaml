@@ -1,0 +1,73 @@
+# HarborMaster Live Notion Source Spec
+#
+# This source spec connects Coral directly to the Notion API.
+# It queries search page objects shared with the Integration.
+#
+# Setup:
+#   $env:NOTION_TOKEN  = "secret_your_token"
+#   coral source add --file .\coral\source-specs\hm_notion_live.yaml
+#   coral source test hm_notion_live
+#
+
+name: hm_notion_live
+version: 0.1.0
+dsl_version: 3
+backend: http
+test_queries:
+  - SELECT id, title FROM hm_notion_live.pages LIMIT 1
+inputs:
+  NOTION_API_BASE:
+    kind: variable
+    default: https://api.notion.com/v1
+    hint: Notion API base URL.
+  NOTION_TOKEN:
+    kind: secret
+    hint: Notion Integration Token.
+base_url: "{{input.NOTION_API_BASE}}"
+auth:
+  type: HeaderAuth
+  headers:
+    - name: Authorization
+      from: template
+      template: Bearer {{input.NOTION_TOKEN}}
+request_headers:
+  - name: Notion-Version
+    from: literal
+    value: "2022-06-28"
+  - name: Accept
+    from: literal
+    value: application/json
+  - name: Content-Type
+    from: literal
+    value: application/json
+rate_limit:
+  retry_after_header: Retry-After
+tables:
+  - name: pages
+    description: Pages and documents from your Notion workspace.
+    request:
+      method: POST
+      path: /search
+      body:
+        filter:
+          value: page
+          property: object
+    response:
+      row_strategy: path
+      row_path: [results]
+      allow_404_empty: true
+    columns:
+      - name: id
+        type: Utf8
+      - name: title
+        type: Utf8
+        expr:
+          kind: path
+          path: [properties, title, title, 0, plain_text]
+      - name: last_edited
+        type: Utf8
+        expr:
+          kind: path
+          path: [last_edited_time]
+      - name: url
+        type: Utf8

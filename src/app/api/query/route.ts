@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { runCoralSql } from "@/lib/coral";
+import { cookies } from "next/headers";
 
 // Simple server-side set to track executed queries and simulate schema/result caching
 const queryCache = new Set<string>();
@@ -13,12 +14,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing or invalid SQL query" }, { status: 400 });
     }
 
+    const cookieStore = await cookies();
+    const config = {
+      githubToken: cookieStore.get("harbormaster_github_token")?.value || "",
+      githubOwner: cookieStore.get("harbormaster_github_owner")?.value || "",
+      githubRepo: cookieStore.get("harbormaster_github_repo")?.value || "",
+      discordToken: cookieStore.get("harbormaster_discord_token")?.value || "",
+      discordChannel: cookieStore.get("harbormaster_discord_channel")?.value || "",
+      notionToken: cookieStore.get("harbormaster_notion_token")?.value || "",
+      geminiKey: cookieStore.get("harbormaster_gemini_key")?.value || "",
+    };
+
     const normalizedSql = sql.trim().toLowerCase();
     const isCached = queryCache.has(normalizedSql);
 
     // Run the query
     const started = Date.now();
-    const result = await runCoralSql<any>(sql);
+    const result = await runCoralSql<any>(sql, config);
     let durationMs = Date.now() - started;
 
     // Cache the query for subsequent runs
