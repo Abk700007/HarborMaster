@@ -85,8 +85,6 @@ const starterQuestions = [
 
 const sourceTone: Record<string, string> = {
   GitHub: "border-blue-500/20 bg-blue-500/5 text-blue-300",
-  Linear: "border-violet-500/20 bg-violet-500/5 text-violet-300",
-  Slack: "border-teal-500/20 bg-teal-500/5 text-teal-300",
   Notion: "border-slate-500/20 bg-slate-500/5 text-slate-300",
   Discord: "border-sky-500/20 bg-sky-500/5 text-sky-300",
 };
@@ -95,7 +93,7 @@ const categoryIcon = {
   Fix: Activity,
   Review: GitPullRequest,
   Reply: MessageSquare,
-  Ship: ShieldAlert,
+  Ship: Sparkles,
 };
 
 const schemaList = [
@@ -106,43 +104,13 @@ const schemaList = [
     columns: [
       { name: "id", type: "Utf8 (PR number)" },
       { name: "title", type: "Utf8" },
-      { name: "issue_key", type: "Utf8 (references Linear)" },
+      { name: "issue_key", type: "Utf8 (references common key)" },
       { name: "status", type: "Utf8 (open / closed)" },
       { name: "review_state", type: "Utf8 (changes_requested / approved)" },
       { name: "ci_state", type: "Utf8 (failed / passed)" },
       { name: "updated_at", type: "Utf8" },
       { name: "author", type: "Utf8" },
       { name: "url", type: "Utf8" },
-    ]
-  },
-  {
-    name: "hm_linear",
-    description: "Linear issues, task priorities, team owners, release versions, and due dates.",
-    table: "issues",
-    columns: [
-      { name: "key", type: "Utf8 (e.g., LIN-431)" },
-      { name: "title", type: "Utf8" },
-      { name: "priority", type: "Utf8 (urgent / high / medium)" },
-      { name: "status", type: "Utf8" },
-      { name: "assignee", type: "Utf8" },
-      { name: "due_date", type: "Utf8" },
-      { name: "release", type: "Utf8 (e.g., v1.4)" },
-      { name: "score", type: "Int64 (0-100)" },
-      { name: "url", type: "Utf8" },
-    ]
-  },
-  {
-    name: "hm_slack",
-    description: "Slack messages containing incident discussions and cross-functional blockers.",
-    table: "messages",
-    columns: [
-      { name: "id", type: "Utf8" },
-      { name: "channel_name", type: "Utf8" },
-      { name: "text", type: "Utf8" },
-      { name: "author", type: "Utf8" },
-      { name: "issue_key", type: "Utf8 (references Linear)" },
-      { name: "created_at", type: "Utf8" },
-      { name: "sentiment", type: "Utf8" },
     ]
   },
   {
@@ -233,62 +201,6 @@ function renderEvidencePreview(ev: EvidenceItem, key?: string | number) {
     );
   }
 
-  if (src === "slack") {
-    return (
-      <div key={key} className="preview-slack text-xs rounded-lg p-3 bg-[#1a1d21] border border-white/[0.04] flex flex-col gap-1.5">
-        <div className="flex items-center justify-between text-[10px]">
-          <div className="flex items-center gap-1.5 text-teal-400 font-mono">
-            <Activity className="size-3.5 text-teal-400" />
-            <span>#incidents-alerts / Slack</span>
-          </div>
-          <span className="text-slate-500 text-[9px] font-mono">{ev.time || "1 hour ago"}</span>
-        </div>
-        <div className="flex items-start gap-2.5 mt-1">
-          <div className="size-6 rounded bg-[#4a154b] flex items-center justify-center text-[9px] font-bold text-white shrink-0">
-            S
-          </div>
-          <div className="flex-1 space-y-0.5">
-            <div className="flex items-baseline gap-1.5">
-              <span className="font-semibold text-white text-[11px]">Slack Bot</span>
-              <span className="text-[8px] text-slate-400 font-mono">{ev.ref || "INCIDENT-40"}</span>
-            </div>
-            <p className="text-slate-300 text-[10.5px] leading-normal bg-white/[0.02] p-2 rounded border border-white/[0.02]">
-              {ev.excerpt}
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (src === "linear") {
-    return (
-      <div key={key} className="preview-linear text-xs rounded-lg p-3 bg-[#141416] border border-white/[0.06] flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5 text-violet-400 font-mono">
-            <ShieldAlert className="size-3.5 text-violet-400" />
-            <span>{ev.ref || "LIN-421"} / Linear</span>
-          </div>
-          <span className="text-slate-500 text-[9px] font-mono">{ev.time || "Today"}</span>
-        </div>
-        <div className="space-y-1">
-          <h4 className="font-semibold text-white text-[11px] leading-tight">{ev.label}</h4>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-[8px] uppercase tracking-wide bg-amber-500/10 border border-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-semibold font-mono">
-              High Priority
-            </span>
-            <span className="text-[8px] uppercase tracking-wide bg-white/5 border border-white/10 text-slate-300 px-1.5 py-0.5 rounded font-mono">
-              Backlog
-            </span>
-          </div>
-          <p className="text-slate-400 text-[10px] leading-relaxed italic bg-black/20 p-2 rounded border border-white/[0.02] mt-1.5">
-            "{ev.excerpt}"
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   // Fallback (Notion or other)
   return (
     <div key={key} className="text-xs rounded-lg p-3 bg-card border border-white/[0.04] flex flex-col gap-2 hover:bg-slate-900/40 transition-colors">
@@ -320,7 +232,9 @@ export function HarborMasterApp() {
   const [githubSyncOk, setGithubSyncOk] = useState(false);
   const [discordSyncOk, setDiscordSyncOk] = useState(false);
   const [notionSyncOk, setNotionSyncOk] = useState(false);
-  const [slackSyncOk, setSlackSyncOk] = useState(false);
+
+  // Workspace scope for onboarding
+  const [workspaceScope, setWorkspaceScope] = useState<"single" | "organization">("single");
 
   // Settings / connection credentials states (mirrored in onboarding)
   const [geminiKey, setGeminiKey] = useState("");
@@ -330,7 +244,6 @@ export function HarborMasterApp() {
   const [discordToken, setDiscordToken] = useState("");
   const [discordChannel, setDiscordChannel] = useState("");
   const [notionToken, setNotionToken] = useState("");
-  const [slackWebhook, setSlackWebhook] = useState("");
 
   // Testing states
   const [testingConnection, setTestingConnection] = useState(false);
@@ -344,7 +257,7 @@ export function HarborMasterApp() {
     {
       role: "assistant",
       content:
-        "Morning brief ready. Your highest leverage move is resolving the OAuth token expiration bug. Under the hood, Coral SQL has joined failing pull requests, Discord user support logs, and Linear release items to confirm this blocks your upcoming v1.4 release.",
+        "Morning brief ready. Your highest leverage move is resolving the OAuth token expiration bug. Under the hood, Coral SQL has joined failing pull requests, Discord user support logs, and Notion roadmap items to confirm this blocks your upcoming v1.4 release.",
       sql: buildDemoChat("next").sql,
       evidence: buildDemoChat("next").evidence,
     },
@@ -367,7 +280,7 @@ export function HarborMasterApp() {
 
   // Action modal state
   const [selectedAction, setSelectedAction] = useState<ActionItem | null>(null);
-  const [actionType, setActionType] = useState<"discord" | "slack" | "github" | "linear" | null>(null);
+  const [actionType, setActionType] = useState<"discord" | "github" | "notion" | null>(null);
   const [draftText, setDraftText] = useState("");
   const [drafting, setDrafting] = useState(false);
   const [executingAction, setExecutingAction] = useState(false);
@@ -415,7 +328,6 @@ export function HarborMasterApp() {
     setGithubSyncOk(false);
     setDiscordSyncOk(false);
     setNotionSyncOk(false);
-    setSlackSyncOk(false);
     showToast("Application stage reset to Landing Page", "info");
   };
 
@@ -514,7 +426,7 @@ export function HarborMasterApp() {
     }
   }
 
-  async function handleOpenAction(action: ActionItem, type: "discord" | "slack" | "github" | "linear") {
+  async function handleOpenAction(action: ActionItem, type: "discord" | "github" | "notion") {
     setSelectedAction(action);
     setActionType(type);
     setDraftText("");
@@ -626,25 +538,23 @@ export function HarborMasterApp() {
     }
   }
 
-  // Onboarding Step Switcher
+  // Onboarding Step Switcher (Scope → GitHub → Discord → Notion → Sync)
   const handleOnboardingNext = () => {
-    if (onboardingStep === 1 && !githubSyncOk) {
-      setGithubSyncOk(true); // Auto-mock pass if they skip
+    // Step 1 is workspace scope — no sync needed
+    if (onboardingStep === 2 && !githubSyncOk) {
+      setGithubSyncOk(true);
     }
-    if (onboardingStep === 2 && !discordSyncOk) {
-      setDiscordSyncOk(true); // Auto-mock pass if they skip
-    }
-    if (onboardingStep === 3) {
-      setNotionSyncOk(true);
+    if (onboardingStep === 3 && !discordSyncOk) {
+      setDiscordSyncOk(true);
     }
     if (onboardingStep === 4) {
-      setSlackSyncOk(true);
+      setNotionSyncOk(true);
     }
 
     if (onboardingStep < 4) {
       setOnboardingStep((prev) => prev + 1);
     } else {
-      // Step 5: Sync Workspace Animation stage
+      // Step 5: Build Workspace Animation
       setOnboardingStep(5);
       let progress = 0;
       const interval = setInterval(() => {
@@ -700,16 +610,15 @@ export function HarborMasterApp() {
 
   const syncLogs = useMemo(() => {
     const logs: string[] = [];
-    if (syncProgress >= 10) logs.push("[SYNC] Initiating handshake with hm_github database...");
-    if (syncProgress >= 20) logs.push("[SYNC] Handshake OK. Pulling branch metadata and commit shas...");
-    if (syncProgress >= 30) logs.push("[SYNC] Synced 24 active PRs. Analyzing check_run status...");
-    if (syncProgress >= 40) logs.push("[SYNC] Initiating handshake with hm_discord server...");
-    if (syncProgress >= 50) logs.push("[SYNC] Synced 18 recent support messages from #general-help...");
-    if (syncProgress >= 60) logs.push("[SYNC] Indexing hm_linear board keys: LIN-421, LIN-431...");
-    if (syncProgress >= 70) logs.push("[SYNC] Connecting to hm_notion pages. Fetching release v1.4 FAQs...");
-    if (syncProgress >= 80) logs.push("[CORAL] Compiling federated table query index mappings...");
-    if (syncProgress >= 90) logs.push("[CORAL] Resolving join keys: github.pr.issue_key <-> linear.issues.key...");
-    if (syncProgress >= 100) logs.push("[SUCCESS] Schema synchronization complete. Brief cached.");
+    if (syncProgress >= 10) logs.push("Importing repositories...");
+    if (syncProgress >= 20) logs.push("Scanning pull requests, issues, and CI pipelines...");
+    if (syncProgress >= 35) logs.push("Analyzing community conversations...");
+    if (syncProgress >= 50) logs.push("Detecting sentiment patterns in support channels...");
+    if (syncProgress >= 65) logs.push("Indexing documentation...");
+    if (syncProgress >= 75) logs.push("Building cross-source relationships...");
+    if (syncProgress >= 85) logs.push("Identifying release blockers and risk signals...");
+    if (syncProgress >= 95) logs.push("Generating first maintainer brief...");
+    if (syncProgress >= 100) logs.push("✓ Workspace ready. Your first brief is waiting.");
     return logs;
   }, [syncProgress]);
 
@@ -783,110 +692,56 @@ export function HarborMasterApp() {
 
               {/* Connection lines from nodes to HarborMaster hub (50% left, 52% top) */}
               <line
-                x1="22%" y1="35%" x2="50%" y2="52%"
+                x1="22%" y1="38%" x2="50%" y2="52%"
                 stroke={hoveredNode === "github" ? "oklch(0.76 0.12 195 / 65%)" : (hoveredNode ? "oklch(0.76 0.12 195 / 22%)" : "oklch(0.76 0.12 195 / 12%)")}
                 strokeWidth={hoveredNode === "github" ? "2.0" : "1.0"}
                 className="hm-signal-line transition-all duration-300"
                 filter={hoveredNode === "github" ? "url(#glow-cyan)" : ""}
               />
               <line
-                x1="78%" y1="32%" x2="50%" y2="52%"
+                x1="78%" y1="38%" x2="50%" y2="52%"
                 stroke={hoveredNode === "discord" ? "oklch(0.76 0.12 195 / 65%)" : (hoveredNode ? "oklch(0.76 0.12 195 / 22%)" : "oklch(0.76 0.12 195 / 12%)")}
                 strokeWidth={hoveredNode === "discord" ? "2.0" : "1.0"}
                 className="hm-signal-line transition-all duration-300"
                 filter={hoveredNode === "discord" ? "url(#glow-cyan)" : ""}
               />
               <line
-                x1="18%" y1="68%" x2="50%" y2="52%"
-                stroke={hoveredNode === "slack" ? "oklch(0.76 0.12 195 / 65%)" : (hoveredNode ? "oklch(0.76 0.12 195 / 22%)" : "oklch(0.76 0.12 195 / 12%)")}
-                strokeWidth={hoveredNode === "slack" ? "2.0" : "1.0"}
-                className="hm-signal-line transition-all duration-300"
-                filter={hoveredNode === "slack" ? "url(#glow-cyan)" : ""}
-              />
-              <line
-                x1="82%" y1="65%" x2="50%" y2="52%"
-                stroke={hoveredNode === "linear" ? "oklch(0.76 0.12 195 / 65%)" : (hoveredNode ? "oklch(0.76 0.12 195 / 22%)" : "oklch(0.76 0.12 195 / 12%)")}
-                strokeWidth={hoveredNode === "linear" ? "2.0" : "1.0"}
-                className="hm-signal-line transition-all duration-300"
-                filter={hoveredNode === "linear" ? "url(#glow-cyan)" : ""}
-              />
-              <line
-                x1="50%" y1="82%" x2="50%" y2="52%"
+                x1="50%" y1="76%" x2="50%" y2="52%"
                 stroke={hoveredNode === "notion" ? "oklch(0.76 0.12 195 / 65%)" : (hoveredNode ? "oklch(0.76 0.12 195 / 22%)" : "oklch(0.76 0.12 195 / 12%)")}
                 strokeWidth={hoveredNode === "notion" ? "2.0" : "1.0"}
                 className="hm-signal-line transition-all duration-300"
                 filter={hoveredNode === "notion" ? "url(#glow-cyan)" : ""}
               />
 
-              {/* Flowing animated telemetry packets - Staggered 3-packet streams */}
+              {/* Flowing animated telemetry packets */}
               {/* GitHub Packets */}
               <circle r="2" fill="oklch(0.76 0.12 195)" opacity={hoveredNode === "github" ? 0.95 : (hoveredNode ? 0.3 : 0.15)} filter={hoveredNode === "github" ? "url(#glow-cyan)" : ""}>
                 <animate attributeName="cx" from="22%" to="50%" dur="1.8s" repeatCount="indefinite" />
-                <animate attributeName="cy" from="35%" to="52%" dur="1.8s" repeatCount="indefinite" />
+                <animate attributeName="cy" from="38%" to="52%" dur="1.8s" repeatCount="indefinite" />
               </circle>
               <circle r="2" fill="oklch(0.76 0.12 195)" opacity={hoveredNode === "github" ? 0.95 : (hoveredNode ? 0.3 : 0.15)} filter={hoveredNode === "github" ? "url(#glow-cyan)" : ""}>
                 <animate attributeName="cx" from="22%" to="50%" dur="1.8s" begin="0.6s" repeatCount="indefinite" />
-                <animate attributeName="cy" from="35%" to="52%" dur="1.8s" begin="0.6s" repeatCount="indefinite" />
-              </circle>
-              <circle r="2" fill="oklch(0.76 0.12 195)" opacity={hoveredNode === "github" ? 0.95 : (hoveredNode ? 0.3 : 0.15)} filter={hoveredNode === "github" ? "url(#glow-cyan)" : ""}>
-                <animate attributeName="cx" from="22%" to="50%" dur="1.8s" begin="1.2s" repeatCount="indefinite" />
-                <animate attributeName="cy" from="35%" to="52%" dur="1.8s" begin="1.2s" repeatCount="indefinite" />
+                <animate attributeName="cy" from="38%" to="52%" dur="1.8s" begin="0.6s" repeatCount="indefinite" />
               </circle>
 
               {/* Discord Packets */}
               <circle r="2" fill="oklch(0.76 0.12 195)" opacity={hoveredNode === "discord" ? 0.95 : (hoveredNode ? 0.3 : 0.15)} filter={hoveredNode === "discord" ? "url(#glow-cyan)" : ""}>
                 <animate attributeName="cx" from="78%" to="50%" dur="1.8s" repeatCount="indefinite" />
-                <animate attributeName="cy" from="32%" to="52%" dur="1.8s" repeatCount="indefinite" />
+                <animate attributeName="cy" from="38%" to="52%" dur="1.8s" repeatCount="indefinite" />
               </circle>
               <circle r="2" fill="oklch(0.76 0.12 195)" opacity={hoveredNode === "discord" ? 0.95 : (hoveredNode ? 0.3 : 0.15)} filter={hoveredNode === "discord" ? "url(#glow-cyan)" : ""}>
                 <animate attributeName="cx" from="78%" to="50%" dur="1.8s" begin="0.6s" repeatCount="indefinite" />
-                <animate attributeName="cy" from="32%" to="52%" dur="1.8s" begin="0.6s" repeatCount="indefinite" />
-              </circle>
-              <circle r="2" fill="oklch(0.76 0.12 195)" opacity={hoveredNode === "discord" ? 0.95 : (hoveredNode ? 0.3 : 0.15)} filter={hoveredNode === "discord" ? "url(#glow-cyan)" : ""}>
-                <animate attributeName="cx" from="78%" to="50%" dur="1.8s" begin="1.2s" repeatCount="indefinite" />
-                <animate attributeName="cy" from="32%" to="52%" dur="1.8s" begin="1.2s" repeatCount="indefinite" />
-              </circle>
-
-              {/* Slack Packets */}
-              <circle r="2" fill="oklch(0.76 0.12 195)" opacity={hoveredNode === "slack" ? 0.95 : (hoveredNode ? 0.3 : 0.15)} filter={hoveredNode === "slack" ? "url(#glow-cyan)" : ""}>
-                <animate attributeName="cx" from="18%" to="50%" dur="1.8s" repeatCount="indefinite" />
-                <animate attributeName="cy" from="68%" to="52%" dur="1.8s" repeatCount="indefinite" />
-              </circle>
-              <circle r="2" fill="oklch(0.76 0.12 195)" opacity={hoveredNode === "slack" ? 0.95 : (hoveredNode ? 0.3 : 0.15)} filter={hoveredNode === "slack" ? "url(#glow-cyan)" : ""}>
-                <animate attributeName="cx" from="18%" to="50%" dur="1.8s" begin="0.6s" repeatCount="indefinite" />
-                <animate attributeName="cy" from="68%" to="52%" dur="1.8s" begin="0.6s" repeatCount="indefinite" />
-              </circle>
-              <circle r="2" fill="oklch(0.76 0.12 195)" opacity={hoveredNode === "slack" ? 0.95 : (hoveredNode ? 0.3 : 0.15)} filter={hoveredNode === "slack" ? "url(#glow-cyan)" : ""}>
-                <animate attributeName="cx" from="18%" to="50%" dur="1.8s" begin="1.2s" repeatCount="indefinite" />
-                <animate attributeName="cy" from="68%" to="52%" dur="1.8s" begin="1.2s" repeatCount="indefinite" />
-              </circle>
-
-              {/* Linear Packets */}
-              <circle r="2" fill="oklch(0.76 0.12 195)" opacity={hoveredNode === "linear" ? 0.95 : (hoveredNode ? 0.3 : 0.15)} filter={hoveredNode === "linear" ? "url(#glow-cyan)" : ""}>
-                <animate attributeName="cx" from="82%" to="50%" dur="1.8s" repeatCount="indefinite" />
-                <animate attributeName="cy" from="65%" to="52%" dur="1.8s" repeatCount="indefinite" />
-              </circle>
-              <circle r="2" fill="oklch(0.76 0.12 195)" opacity={hoveredNode === "linear" ? 0.95 : (hoveredNode ? 0.3 : 0.15)} filter={hoveredNode === "linear" ? "url(#glow-cyan)" : ""}>
-                <animate attributeName="cx" from="82%" to="50%" dur="1.8s" begin="0.6s" repeatCount="indefinite" />
-                <animate attributeName="cy" from="65%" to="52%" dur="1.8s" begin="0.6s" repeatCount="indefinite" />
-              </circle>
-              <circle r="2" fill="oklch(0.76 0.12 195)" opacity={hoveredNode === "linear" ? 0.95 : (hoveredNode ? 0.3 : 0.15)} filter={hoveredNode === "linear" ? "url(#glow-cyan)" : ""}>
-                <animate attributeName="cx" from="82%" to="50%" dur="1.8s" begin="1.2s" repeatCount="indefinite" />
-                <animate attributeName="cy" from="65%" to="52%" dur="1.8s" begin="1.2s" repeatCount="indefinite" />
+                <animate attributeName="cy" from="38%" to="52%" dur="1.8s" begin="0.6s" repeatCount="indefinite" />
               </circle>
 
               {/* Notion Packets */}
               <circle r="2" fill="oklch(0.76 0.12 195)" opacity={hoveredNode === "notion" ? 0.95 : (hoveredNode ? 0.3 : 0.15)} filter={hoveredNode === "notion" ? "url(#glow-cyan)" : ""}>
                 <animate attributeName="cx" from="50%" to="50%" dur="1.8s" repeatCount="indefinite" />
-                <animate attributeName="cy" from="82%" to="52%" dur="1.8s" repeatCount="indefinite" />
+                <animate attributeName="cy" from="76%" to="52%" dur="1.8s" repeatCount="indefinite" />
               </circle>
               <circle r="2" fill="oklch(0.76 0.12 195)" opacity={hoveredNode === "notion" ? 0.95 : (hoveredNode ? 0.3 : 0.15)} filter={hoveredNode === "notion" ? "url(#glow-cyan)" : ""}>
                 <animate attributeName="cx" from="50%" to="50%" dur="1.8s" begin="0.6s" repeatCount="indefinite" />
-                <animate attributeName="cy" from="82%" to="52%" dur="1.8s" begin="0.6s" repeatCount="indefinite" />
-              </circle>
-              <circle r="2" fill="oklch(0.76 0.12 195)" opacity={hoveredNode === "notion" ? 0.95 : (hoveredNode ? 0.3 : 0.15)} filter={hoveredNode === "notion" ? "url(#glow-cyan)" : ""}>
-                <animate attributeName="cx" from="50%" to="50%" dur="1.8s" begin="1.2s" repeatCount="indefinite" />
-                <animate attributeName="cy" from="82%" to="52%" dur="1.8s" begin="1.2s" repeatCount="indefinite" />
+                <animate attributeName="cy" from="76%" to="52%" dur="1.8s" begin="0.6s" repeatCount="indefinite" />
               </circle>
             </svg>
 
@@ -924,7 +779,7 @@ export function HarborMasterApp() {
                 "absolute flex flex-col items-center gap-1.5 pointer-events-auto cursor-pointer group transition-all duration-300",
                 hoveredNode && hoveredNode !== "github" ? "opacity-35 scale-95" : "opacity-100 scale-100"
               )}
-              style={{ left: "22%", top: "35%", transform: "translate(-50%, -50%)" }}
+              style={{ left: "22%", top: "38%", transform: "translate(-50%, -50%)" }}
               onMouseEnter={() => setHoveredNode("github")}
               onMouseLeave={() => setHoveredNode(null)}
             >
@@ -946,7 +801,7 @@ export function HarborMasterApp() {
                 <div className="p-2.5 space-y-1.5 text-slate-300">
                   <div className="flex justify-between border-b border-white/[0.03] pb-1">
                     <span className="text-blue-400 font-semibold">id</span>
-                    <span className="text-slate-500">Int64 (PK)</span>
+                    <span className="text-slate-500">Utf8 (PK)</span>
                   </div>
                   <div className="flex justify-between border-b border-white/[0.03] pb-1">
                     <span className="text-blue-400 font-semibold">title</span>
@@ -974,7 +829,7 @@ export function HarborMasterApp() {
                 "absolute flex flex-col items-center gap-1.5 pointer-events-auto cursor-pointer group transition-all duration-300",
                 hoveredNode && hoveredNode !== "discord" ? "opacity-35 scale-95" : "opacity-100 scale-100"
               )}
-              style={{ left: "78%", top: "32%", transform: "translate(-50%, -50%)" }}
+              style={{ left: "78%", top: "38%", transform: "translate(-50%, -50%)" }}
               onMouseEnter={() => setHoveredNode("discord")}
               onMouseLeave={() => setHoveredNode(null)}
             >
@@ -1018,113 +873,13 @@ export function HarborMasterApp() {
               </div>
             </div>
 
-            {/* Slack Node */}
-            <div
-              className={cn(
-                "absolute flex flex-col items-center gap-1.5 pointer-events-auto cursor-pointer group transition-all duration-300",
-                hoveredNode && hoveredNode !== "slack" ? "opacity-35 scale-95" : "opacity-100 scale-100"
-              )}
-              style={{ left: "18%", top: "68%", transform: "translate(-50%, -50%)" }}
-              onMouseEnter={() => setHoveredNode("slack")}
-              onMouseLeave={() => setHoveredNode(null)}
-            >
-              <div className="relative">
-                {/* Pulsing glow ring on hover */}
-                <div className="absolute -inset-1.5 rounded-xl bg-teal-500/25 blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 animate-pulse" />
-                <div className="relative size-10 rounded-xl bg-slate-900 border border-teal-500/30 text-teal-400 flex items-center justify-center shadow-lg shadow-teal-950/20 group-hover:scale-110 group-hover:border-teal-400 group-hover:shadow-teal-500/20 transition-all duration-300 hm-float-delayed-2">
-                  <Activity className="size-5" />
-                </div>
-              </div>
-              <span className="font-mono text-[9px] text-slate-500 group-hover:text-teal-300 transition-colors uppercase tracking-wider font-semibold bg-slate-950/80 px-1.5 py-0.5 rounded border border-white/[0.03]">
-                Slack
-              </span>
-              <div className="absolute hidden group-hover:flex flex-col z-30 bottom-14 w-52 bg-slate-950/90 border border-teal-500/40 rounded-xl shadow-2xl shadow-teal-950/50 text-left pointer-events-none backdrop-blur-md animate-in fade-in slide-in-from-bottom-2 duration-200 overflow-hidden font-mono text-[9px]">
-                <div className="bg-teal-500/10 border-b border-teal-500/20 px-3 py-1.5 flex justify-between items-center">
-                  <span className="text-teal-300 font-bold">slack.messages</span>
-                  <span className="text-[8px] text-slate-500 uppercase">table</span>
-                </div>
-                <div className="p-2.5 space-y-1.5 text-slate-300">
-                  <div className="flex justify-between border-b border-white/[0.03] pb-1">
-                    <span className="text-teal-400 font-semibold">id</span>
-                    <span className="text-slate-500">Utf8 (PK)</span>
-                  </div>
-                  <div className="flex justify-between border-b border-white/[0.03] pb-1">
-                    <span className="text-teal-400 font-semibold">channel_name</span>
-                    <span className="text-slate-500">Utf8</span>
-                  </div>
-                  <div className="flex justify-between border-b border-white/[0.03] pb-1">
-                    <span className="text-teal-400 font-semibold">text</span>
-                    <span className="text-slate-500">Utf8</span>
-                  </div>
-                  <div className="flex justify-between border-b border-white/[0.03] pb-1">
-                    <span className="text-teal-400 font-semibold">sentiment</span>
-                    <span className="text-slate-500">Utf8</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-teal-400 font-semibold">issue_key</span>
-                    <span className="text-slate-500">Utf8 (FK)</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Linear Node */}
-            <div
-              className={cn(
-                "absolute flex flex-col items-center gap-1.5 pointer-events-auto cursor-pointer group transition-all duration-300",
-                hoveredNode && hoveredNode !== "linear" ? "opacity-35 scale-95" : "opacity-100 scale-100"
-              )}
-              style={{ left: "82%", top: "65%", transform: "translate(-50%, -50%)" }}
-              onMouseEnter={() => setHoveredNode("linear")}
-              onMouseLeave={() => setHoveredNode(null)}
-            >
-              <div className="relative">
-                {/* Pulsing glow ring on hover */}
-                <div className="absolute -inset-1.5 rounded-xl bg-violet-500/25 blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 animate-pulse" />
-                <div className="relative size-10 rounded-xl bg-slate-900 border border-violet-500/30 text-violet-400 flex items-center justify-center shadow-lg shadow-violet-950/20 group-hover:scale-110 group-hover:border-violet-400 group-hover:shadow-violet-500/20 transition-all duration-300 hm-float-delayed-3">
-                  <ShieldAlert className="size-5" />
-                </div>
-              </div>
-              <span className="font-mono text-[9px] text-slate-500 group-hover:text-violet-300 transition-colors uppercase tracking-wider font-semibold bg-slate-950/80 px-1.5 py-0.5 rounded border border-white/[0.03]">
-                Linear
-              </span>
-              <div className="absolute hidden group-hover:flex flex-col z-30 bottom-14 w-52 bg-slate-950/90 border border-violet-500/40 rounded-xl shadow-2xl shadow-violet-950/50 text-left pointer-events-none backdrop-blur-md animate-in fade-in slide-in-from-bottom-2 duration-200 overflow-hidden font-mono text-[9px]">
-                <div className="bg-violet-500/10 border-b border-violet-500/20 px-3 py-1.5 flex justify-between items-center">
-                  <span className="text-violet-300 font-bold">linear.issues</span>
-                  <span className="text-[8px] text-slate-500 uppercase">table</span>
-                </div>
-                <div className="p-2.5 space-y-1.5 text-slate-300">
-                  <div className="flex justify-between border-b border-white/[0.03] pb-1">
-                    <span className="text-violet-400 font-semibold">key</span>
-                    <span className="text-slate-500">Utf8 (PK)</span>
-                  </div>
-                  <div className="flex justify-between border-b border-white/[0.03] pb-1">
-                    <span className="text-violet-400 font-semibold">title</span>
-                    <span className="text-slate-500">Utf8</span>
-                  </div>
-                  <div className="flex justify-between border-b border-white/[0.03] pb-1">
-                    <span className="text-violet-400 font-semibold">priority</span>
-                    <span className="text-slate-500">Utf8</span>
-                  </div>
-                  <div className="flex justify-between border-b border-white/[0.03] pb-1">
-                    <span className="text-violet-400 font-semibold">score</span>
-                    <span className="text-slate-500">Int64</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-violet-400 font-semibold">release</span>
-                    <span className="text-slate-500">Utf8</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
             {/* Notion Node */}
             <div
               className={cn(
                 "absolute flex flex-col items-center gap-1.5 pointer-events-auto cursor-pointer group transition-all duration-300",
                 hoveredNode && hoveredNode !== "notion" ? "opacity-35 scale-95" : "opacity-100 scale-100"
               )}
-              style={{ left: "50%", top: "82%", transform: "translate(-50%, -50%)" }}
+              style={{ left: "50%", top: "76%", transform: "translate(-50%, -50%)" }}
               onMouseEnter={() => setHoveredNode("notion")}
               onMouseLeave={() => setHoveredNode(null)}
             >
@@ -1178,140 +933,167 @@ export function HarborMasterApp() {
               <span className="font-semibold text-lg tracking-tight font-heading">HarborMaster</span>
             </div>
             <div className="flex items-center gap-3">
+              <button
+                className="text-xs text-slate-400 hover:text-white px-3 py-1.5 transition-colors"
+                onClick={() => {
+                  const el = document.getElementById("how-it-works");
+                  if (el) el.scrollIntoView({ behavior: "smooth" });
+                }}
+              >
+                See How It Works
+              </button>
               <Button variant="outline" className="border-slate-800 bg-slate-950/40 text-xs hover:bg-slate-900/50" onClick={() => transitionToStage("dashboard")}>
                 View Live Demo
               </Button>
               <Button className="bg-teal-500/10 border border-teal-500/30 text-teal-300 hover:bg-teal-500/20 text-xs shadow-sm shadow-teal-950/10" onClick={() => transitionToStage("auth")}>
-                Sign In
+                Build Workspace
               </Button>
             </div>
           </header>
 
           {/* Landing Hero */}
           <main className="w-full max-w-5xl mx-auto px-6 pt-12 pb-20 flex flex-col items-center justify-start text-center z-10 flex-1 space-y-12">
-            <div className="space-y-5 max-w-3xl mx-auto">
+            <div className="space-y-5 max-w-3xl mx-auto animate-in fade-in slide-in-from-top-4 duration-500">
               <Badge variant="outline" className="border-teal-500/20 bg-teal-500/5 text-teal-300 font-mono text-[10px] tracking-wide py-0.5 px-2.5">
-                ⚓ CORAL SQL INTERACTION ENGINE
+                ⚓ FOR OPEN-SOURCE MAINTAINERS
               </Badge>
-              <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight text-white leading-[1.1] font-heading max-w-3xl mx-auto">
-                Your AI First Mate for <br />
-                <span className="bg-gradient-to-r from-teal-300 via-cyan-400 to-blue-400 bg-clip-text text-transparent">Open Source Operations</span>
+              <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight text-white leading-[1.1] font-heading max-w-3xl mx-auto font-sans">
+                Stop Context Switching.<br />
+                <span className="bg-gradient-to-r from-teal-300 via-cyan-400 to-blue-400 bg-clip-text text-transparent">Start Maintaining.</span>
               </h1>
-              <p className="text-sm text-slate-400 max-w-lg mx-auto leading-relaxed font-sans">
-                HarborMaster connects GitHub, Discord, Notion, Slack, and Linear into one intelligent command center powered by Coral SQL. It translates multiple messy developer channels into actionable operational priorities.
+              <p className="text-sm text-slate-405 max-w-xl mx-auto leading-relaxed font-sans">
+                HarborMaster analyzes GitHub repositories, Discord communities, and Notion documentation to automatically identify release blockers, support trends, and documentation gaps.
               </p>
             </div>
 
-            {/* <div className="flex items-center gap-5">
+            <div className="flex items-center gap-4 z-20">
               <Button 
                 size="lg" 
                 className="bg-teal-500/10 border border-teal-500/30 text-teal-300 hover:bg-teal-500/20 hover:border-teal-400 hover:shadow-[0_0_15px_rgba(20,184,166,0.15)] px-8 font-semibold text-sm rounded-lg transition-all duration-300" 
                 onClick={() => transitionToStage("auth")}
               >
-                Start Morning Brief
+                Build My Workspace
               </Button>
               <Button 
                 size="lg" 
                 variant="ghost" 
                 className="text-slate-500 hover:text-slate-300 bg-transparent hover:bg-white/[0.02] border-transparent text-sm transition-all duration-300 px-8" 
-                onClick={() => transitionToStage("dashboard")}
+                onClick={() => {
+                  const el = document.getElementById("how-it-works");
+                  if (el) el.scrollIntoView({ behavior: "smooth" });
+                }}
               >
-                Skip Onboarding
+                See How It Works
               </Button>
-            </div> */}
+            </div>
 
-            {/* Product Story Visual Grid */}
-            <div className="w-full max-w-4xl pt-8">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
-                {/* Feature 1 */}
-                <div className="rounded-xl border border-white/[0.05] bg-[#101424]/85 hover:bg-[#141930]/95 hover:border-teal-500/30 hover:shadow-lg hover:shadow-teal-950/20 hover:-translate-y-1 transition-all duration-300 p-5 flex flex-col justify-between space-y-5 group">
-                  <div className="space-y-3">
-                    <div className="size-8 rounded-lg bg-teal-500/10 flex items-center justify-center border border-teal-500/20 text-teal-400 group-hover:scale-110 group-hover:bg-teal-500/20 transition-all duration-350">
-                      <Cable className="size-4" />
-                    </div>
-                    <h3 className="text-xs font-semibold text-white font-heading">1. Connect Data Sources</h3>
-                    <div className="flex items-center justify-between gap-1 text-[9px] font-mono bg-slate-950/60 p-2 rounded-lg border border-white/[0.03]">
-                      <span className="flex items-center gap-1 text-blue-300 bg-blue-500/5 px-1.5 py-0.5 rounded border border-blue-500/10">
-                        <Github className="size-2.5" /> PR
-                      </span>
-                      <ChevronRight className="size-2 text-slate-600 animate-pulse" />
-                      <span className="flex items-center gap-1 text-sky-300 bg-sky-500/5 px-1.5 py-0.5 rounded border border-sky-500/10">
-                        <MessageSquare className="size-2.5" /> Discord
-                      </span>
-                      <ChevronRight className="size-2 text-slate-600 animate-pulse" />
-                      <span className="text-teal-300 bg-teal-500/5 px-1.5 py-0.5 rounded border border-teal-500/10">
-                        Join
-                      </span>
-                      <ChevronRight className="size-2 text-slate-600 animate-pulse" />
-                      <span className="text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 font-bold">
-                        Blocker
-                      </span>
-                    </div>
+            {/* Outcomes Grid */}
+            <div className="w-full max-w-4xl pt-8 space-y-4">
+              <h2 className="text-xs font-mono text-slate-500 uppercase tracking-widest text-center">Ecosystem Insights & Actions</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
+                <div className="rounded-xl border border-white/[0.04] bg-[#101424]/60 p-5 space-y-2 hover:border-blue-500/20 hover:-translate-y-0.5 transition-all duration-300">
+                  <h3 className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <Activity className="size-4 text-blue-400" />
+                    Identify Release Blockers
+                  </h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Coral joins failing test runs and open bugs to highlight critical path release risks before branch cuts.
+                  </p>
+                </div>
+                <div className="rounded-xl border border-white/[0.04] bg-[#101424]/60 p-5 space-y-2 hover:border-sky-500/20 hover:-translate-y-0.5 transition-all duration-300">
+                  <h3 className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <MessageSquare className="size-4 text-sky-400" />
+                    Detect Community Signals
+                  </h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Identify recurring user complaints and bugs in Discord support channels before they flood your issue tracker.
+                  </p>
+                </div>
+                <div className="rounded-xl border border-white/[0.04] bg-[#101424]/60 p-5 space-y-2 hover:border-slate-500/20 hover:-translate-y-0.5 transition-all duration-300">
+                  <h3 className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <Globe className="size-4 text-slate-400" />
+                    Review Documentation Gaps
+                  </h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Automatically cross-reference community support requests with Notion wikis to find missing FAQs and setup guides.
+                  </p>
+                </div>
+                <div className="rounded-xl border border-white/[0.04] bg-[#101424]/60 p-5 space-y-2 hover:border-teal-500/20 hover:-translate-y-0.5 transition-all duration-300">
+                  <h3 className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <Bot className="size-4 text-teal-400" />
+                    AI-Prioritized Actions
+                  </h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Get a daily prioritized action plan of the high-leverage moves that keep your open-source project moving forward.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* How It Works Section */}
+            <div id="how-it-works" className="w-full max-w-4xl pt-16 pb-12 space-y-8 scroll-mt-6 border-t border-white/[0.03]">
+              <div className="text-center space-y-2">
+                <h2 className="text-lg font-bold text-white font-heading">How HarborMaster Works</h2>
+                <p className="text-xs text-slate-400 max-w-md mx-auto">
+                  Coral SQL federates your developer tooling into one relational interface, allowing Gemini to analyze your entire system.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 text-left">
+                {/* Step 1 */}
+                <div className="rounded-xl border border-white/[0.03] bg-slate-950/40 p-5 space-y-4 relative group">
+                  <div className="size-8 rounded-lg bg-teal-500/10 flex items-center justify-center border border-teal-500/20 text-teal-400 text-xs font-mono font-bold">
+                    01
                   </div>
-                  <div className="flex items-center gap-2 pt-2 border-t border-white/[0.02]">
-                    <span className="text-[8px] font-mono text-slate-500 uppercase mr-1">CONNECTS:</span>
-                    <div className="flex gap-1">
-                      <div className="p-1 rounded bg-slate-950 border border-white/[0.04]" title="GitHub"><Github className="size-3 text-slate-400" /></div>
-                      <div className="p-1 rounded bg-slate-950 border border-white/[0.04]" title="Discord"><MessageSquare className="size-3 text-sky-400" /></div>
-                      <div className="p-1 rounded bg-slate-950 border border-white/[0.04]" title="Slack"><Activity className="size-3 text-teal-400" /></div>
-                      <div className="p-1 rounded bg-slate-950 border border-white/[0.04]" title="Linear"><ShieldAlert className="size-3 text-violet-400" /></div>
-                      <div className="p-1 rounded bg-slate-950 border border-white/[0.04]" title="Notion"><Globe className="size-3 text-slate-400" /></div>
-                    </div>
+                  <div className="space-y-1">
+                    <h3 className="text-xs font-semibold text-white">Connect Ecosystem</h3>
+                    <p className="text-[11px] text-slate-450 leading-relaxed">
+                      Securely link your GitHub repo, Discord channels, and Notion wiki guides in the onboarding step.
+                    </p>
+                  </div>
+                  <div className="flex gap-1.5 mt-2">
+                    <Github className="size-3.5 text-slate-500" />
+                    <MessageSquare className="size-3.5 text-slate-500" />
+                    <Globe className="size-3.5 text-slate-500" />
                   </div>
                 </div>
 
-                {/* Feature 2 */}
-                <div className="rounded-xl border border-white/[0.05] bg-[#101424]/85 hover:bg-[#141930]/95 hover:border-blue-500/30 hover:shadow-lg hover:shadow-blue-950/20 hover:-translate-y-1 transition-all duration-300 p-5 flex flex-col justify-between space-y-5 group">
-                  <div className="space-y-3">
-                    <div className="size-8 rounded-lg bg-blue-500/10 flex items-center justify-center border border-blue-500/20 text-blue-400 group-hover:scale-110 group-hover:bg-blue-500/20 transition-all duration-350">
-                      <DatabaseZap className="size-4" />
-                    </div>
-                    <h3 className="text-xs font-semibold text-white font-heading">2. Coral Joins Data</h3>
-                    <div className="font-mono text-[9px] bg-slate-950/80 p-2 rounded-lg border border-white/[0.04] overflow-x-auto select-none leading-normal">
-                      <div>
-                        <span className="text-violet-400">SELECT</span> <span className="text-slate-300">*</span> <span className="text-violet-400">FROM</span> <span className="text-blue-300">pull_requests</span> <span className="text-slate-400">pr</span>
-                      </div>
-                      <div>
-                        <span className="text-violet-400">JOIN</span> <span className="text-sky-300">discord.messages</span> <span className="text-slate-400">msg</span>
-                      </div>
-                      <div className="pl-3">
-                        <span className="text-violet-400">ON</span> <span className="text-slate-300">pr.issue_key = msg.issue_key</span>
-                      </div>
-                    </div>
+                {/* Step 2 */}
+                <div className="rounded-xl border border-white/[0.03] bg-slate-950/40 p-5 space-y-4 relative group">
+                  <div className="size-8 rounded-lg bg-blue-500/10 flex items-center justify-center border border-blue-500/20 text-blue-400 text-xs font-mono font-bold">
+                    02
                   </div>
-                  <div className="pt-2 border-t border-white/[0.02]">
-                    <span className="text-[8px] font-mono text-slate-500 uppercase mr-1">STRATEGY:</span>
-                    <span className="text-[9px] text-blue-300 bg-blue-500/5 px-2 py-0.5 rounded border border-blue-500/10">In-Memory Hash Join</span>
+                  <div className="space-y-1">
+                    <h3 className="text-xs font-semibold text-white">Federate with Coral</h3>
+                    <p className="text-[11px] text-slate-450 leading-relaxed">
+                      Coral SQL virtualizes your sources as local tables. Run relational joins directly across files and API objects.
+                    </p>
                   </div>
                 </div>
 
-                {/* Feature 3 */}
-                <div className="rounded-xl border border-white/[0.05] bg-[#101424]/85 hover:bg-[#141930]/95 hover:border-violet-500/30 hover:shadow-lg hover:shadow-violet-950/20 hover:-translate-y-1 transition-all duration-300 p-5 flex flex-col justify-between space-y-5 group">
-                  <div className="space-y-3">
-                    <div className="size-8 rounded-lg bg-violet-500/10 flex items-center justify-center border border-violet-500/20 text-violet-400 group-hover:scale-110 group-hover:bg-violet-500/20 transition-all duration-350">
-                      <Bot className="size-4" />
-                    </div>
-                    <h3 className="text-xs font-semibold text-white font-heading">3. AI Prioritizes Actions</h3>
-                    <div className="space-y-1.5 font-sans text-[10px]">
-                      <div className="flex items-center justify-between bg-red-500/5 border border-red-500/10 px-2 py-1 rounded text-red-300">
-                        <span className="flex items-center gap-1 font-semibold text-[9px]">
-                          <ShieldAlert className="size-3 text-red-400 animate-pulse" /> [Critical]
-                        </span>
-                        <span className="text-slate-300 font-mono text-[9px]">OAuth Token Expiry</span>
-                      </div>
-                      <div className="flex items-center justify-between bg-amber-500/5 border border-amber-500/10 px-2 py-1 rounded text-amber-300">
-                        <span className="flex items-center gap-1 font-semibold text-[9px]">
-                          <AlertTriangle className="size-3 text-amber-400" /> [High]
-                        </span>
-                        <span className="text-slate-300 font-mono text-[9px]">CI Pipeline Failure</span>
-                      </div>
-                    </div>
+                {/* Step 3 */}
+                <div className="rounded-xl border border-white/[0.03] bg-slate-950/40 p-5 space-y-4 relative group">
+                  <div className="size-8 rounded-lg bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20 text-cyan-400 text-xs font-mono font-bold">
+                    03
                   </div>
-                  <div className="flex items-center gap-1.5 pt-2 border-t border-white/[0.02]">
-                    <span className="text-[8px] font-mono text-slate-500 uppercase mr-1">OUTPUT:</span>
-                    <span className="text-[9px] font-mono text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-full flex items-center gap-1">
-                      <Bot className="size-2.5" /> 1 Blocker Identified
-                    </span>
+                  <div className="space-y-1">
+                    <h3 className="text-xs font-semibold text-white">Analyze Relations</h3>
+                    <p className="text-[11px] text-slate-450 leading-relaxed">
+                      Gemini reviews the cross-source joins to pinpoint the root cause bugs that block your releases.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Step 4 */}
+                <div className="rounded-xl border border-white/[0.03] bg-slate-950/40 p-5 space-y-4 relative group">
+                  <div className="size-8 rounded-lg bg-purple-500/10 flex items-center justify-center border border-purple-500/20 text-purple-400 text-xs font-mono font-bold">
+                    04
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-xs font-semibold text-white">Take AI Actions</h3>
+                    <p className="text-[11px] text-slate-450 leading-relaxed">
+                      Review proposed actions and dispatch AI-drafted commits, PR reviews, or Discord channel replies.
+                    </p>
                   </div>
                 </div>
               </div>
@@ -1320,7 +1102,7 @@ export function HarborMasterApp() {
 
           {/* Landing Footer */}
           <footer className="w-full py-6 text-center text-xs text-slate-500 z-10 border-t border-white/[0.03] bg-slate-950/20 font-sans">
-            Powered by Coral. Developed for the We Make Devs Hackathon.
+            Powered by Coral. Developed for the We Make Devs Hackathon. Focuses exclusively on GitHub, Discord, and Notion.
           </footer>
         </div>
       )}
@@ -1372,7 +1154,7 @@ export function HarborMasterApp() {
             {onboardingStep <= 4 && (
               <div className="space-y-2">
                 <div className="flex justify-between items-center text-xs font-mono text-slate-400">
-                  <span>ONBOARDING WIZARD</span>
+                  <span>BUILD YOUR WORKSPACE</span>
                   <span>STEP {onboardingStep} OF 4</span>
                 </div>
                 <div className="h-1 bg-slate-950 rounded-full overflow-hidden">
@@ -1381,8 +1163,89 @@ export function HarborMasterApp() {
               </div>
             )}
 
-            {/* Step 1: Connect GitHub */}
+            {/* Step 1: Workspace Scope */}
             {onboardingStep === 1 && (
+              <Card className="border-white/[0.06] bg-[#101424]/85 backdrop-blur-md p-6 shadow-xl shadow-slate-950/40">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+                  {/* Left Column: Form */}
+                  <div className="md:col-span-7 flex flex-col justify-between space-y-4">
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <Compass className="size-5 text-teal-400" />
+                        <CardTitle className="text-base text-white font-heading">1. Workspace Scope</CardTitle>
+                      </div>
+                      <CardDescription className="text-xs text-slate-400 leading-relaxed font-sans">
+                        Choose whether HarborMaster should analyze one repository or your entire organization.
+                      </CardDescription>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                        <div
+                          onClick={() => setWorkspaceScope("single")}
+                          className={cn(
+                            "rounded-xl border p-4 cursor-pointer transition-all space-y-2",
+                            workspaceScope === "single"
+                              ? "border-teal-400 bg-teal-400/5 shadow-md shadow-teal-950/20"
+                              : "border-white/[0.05] bg-slate-950/45 hover:border-slate-700"
+                          )}
+                        >
+                          <h4 className="text-xs font-semibold text-white">Single Repository</h4>
+                          <p className="text-[10px] text-slate-400 leading-normal">
+                            Monitor and manage a single repository, its linked community chat, and documents.
+                          </p>
+                        </div>
+
+                        <div
+                          onClick={() => setWorkspaceScope("organization")}
+                          className={cn(
+                            "rounded-xl border p-4 cursor-pointer transition-all space-y-2",
+                            workspaceScope === "organization"
+                              ? "border-teal-400 bg-teal-400/5 shadow-md shadow-teal-950/20"
+                              : "border-white/[0.05] bg-slate-950/45 hover:border-slate-700"
+                          )}
+                        >
+                          <h4 className="text-xs font-semibold text-white">Organization Scope</h4>
+                          <p className="text-[10px] text-slate-400 leading-normal">
+                            Monitor and manage all repositories under your organization or workspace automatically.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="pt-4 flex justify-end border-t border-white/[0.04] bg-transparent">
+                      <Button className="bg-teal-500/10 border border-teal-500/30 text-teal-300 hover:bg-teal-500/25 text-xs font-medium" onClick={handleOnboardingNext}>
+                        Next: Connect Repositories
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Tree Visualizer */}
+                  <div className="md:col-span-5 bg-black/40 rounded-xl border border-white/[0.04] p-4 flex flex-col items-center justify-center relative overflow-hidden h-[300px] select-none pointer-events-none">
+                    <div className="absolute inset-0 hm-grid-pattern opacity-[0.06]" />
+                    <span className="text-[8.5px] font-mono text-slate-500 uppercase tracking-widest mb-3 z-10">
+                      Ecosystem Tree Preview
+                    </span>
+                    <svg viewBox="0 0 200 120" className="w-full max-w-[200px] z-10" xmlns="http://www.w3.org/2000/svg">
+                      <circle cx="100" cy="25" r="5" fill="#2dd4bf" opacity="0.9" />
+                      <text x="100" y="16" textAnchor="middle" fill="#2dd4bf" fontSize="6" fontFamily="monospace">Ecosystem</text>
+                      
+                      <line x1="100" y1="25" x2="50" y2="60" stroke="#1e293b" strokeWidth="1.2" />
+                      <line x1="100" y1="25" x2="150" y2="60" stroke="#1e293b" strokeWidth="1.2" />
+                      
+                      <circle cx="50" cy="60" r="4" fill="#3b82f6" opacity="0.8" />
+                      <text x="50" y="72" textAnchor="middle" fill="#3b82f6" fontSize="5.5" fontFamily="monospace">
+                        {workspaceScope === "single" ? "Single Repo" : "Org Repos"}
+                      </text>
+                      
+                      <circle cx="150" cy="60" r="4" fill="#38bdf8" opacity="0.8" />
+                      <text x="150" y="72" textAnchor="middle" fill="#38bdf8" fontSize="5.5" fontFamily="monospace">Channels & Wiki</text>
+                    </svg>
+                  </div>
+                </div>
+              </Card>
+            )}
+
+            {/* Step 2: Connect GitHub */}
+            {onboardingStep === 2 && (
               <Card className="border-white/[0.06] bg-[#101424]/85 backdrop-blur-md p-6 shadow-xl shadow-slate-950/40">
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
                   {/* Left Column: Form */}
@@ -1391,7 +1254,7 @@ export function HarborMasterApp() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Github className="size-5 text-blue-300" />
-                          <CardTitle className="text-base text-white font-heading">1. Configure GitHub Live Source</CardTitle>
+                          <CardTitle className="text-base text-white font-heading">2. Connect Repositories</CardTitle>
                         </div>
                         {githubSyncOk && (
                           <Badge variant="outline" className="border-emerald-500/20 bg-emerald-500/5 text-emerald-400 text-[10px] flex items-center gap-1">
@@ -1400,28 +1263,28 @@ export function HarborMasterApp() {
                         )}
                       </div>
                       <CardDescription className="text-xs text-slate-400 leading-relaxed font-sans">
-                        Allow Coral SQL to query active PR branches, pull reviews, and test pipeline statuses.
+                        HarborMaster uses GitHub to understand issues, pull requests, releases, discussions, and CI failures.
                       </CardDescription>
 
                       <div className="space-y-3">
                         <div className="space-y-1">
                           <label className="text-[10px] font-mono text-slate-400 flex justify-between">
                             <span>OWNER / ORGANIZATION</span>
-                            <span className="text-[9px] text-slate-500 lowercase">e.g. facebook</span>
+                            <span className="text-[9px] text-slate-500 lowercase">e.g. vercel</span>
                           </label>
                           <Input placeholder="e.g., vercel" value={githubOwner} onChange={(e) => setGithubOwner(e.target.value)} className="bg-slate-950 border-slate-900 text-xs focus-visible:ring-teal-500/20 text-white placeholder:text-slate-600" />
                         </div>
                         <div className="space-y-1">
                           <label className="text-[10px] font-mono text-slate-400 flex justify-between">
                             <span>REPOSITORY NAME</span>
-                            <span className="text-[9px] text-slate-500 lowercase">e.g. react</span>
+                            <span className="text-[9px] text-slate-500 lowercase">e.g. next.js</span>
                           </label>
                           <Input placeholder="e.g., next.js" value={githubRepo} onChange={(e) => setGithubRepo(e.target.value)} className="bg-slate-950 border-slate-900 text-xs focus-visible:ring-teal-500/20 text-white placeholder:text-slate-600" />
                         </div>
                         <div className="space-y-1">
                           <label className="text-[10px] font-mono text-slate-400">PERSONAL ACCESS TOKEN (CLASSIC)</label>
                           <Input type="password" placeholder="ghp_..." value={githubToken} onChange={(e) => setGithubToken(e.target.value)} className="bg-slate-950 border-slate-900 text-xs focus-visible:ring-teal-500/20 text-white placeholder:text-slate-600" />
-                          <p className="text-[9px] text-slate-500 mt-1 leading-normal font-sans">Requires a classic GitHub token with <code className="text-teal-400 font-mono">repo</code> scope.</p>
+                          <p className="text-[9px] text-slate-505 mt-1 leading-normal font-sans">Requires a classic GitHub token with <code className="text-teal-400 font-mono">repo</code> scope.</p>
                         </div>
                       </div>
                     </div>
@@ -1432,28 +1295,25 @@ export function HarborMasterApp() {
                         Test connection
                       </Button>
                       <Button className="bg-teal-500/10 border border-teal-500/30 text-teal-300 hover:bg-teal-500/25 text-xs font-medium" onClick={handleOnboardingNext}>
-                        Next: Connect Discord
+                        Next: Connect Community
                       </Button>
                     </div>
-                  </div>                  {/* Right Column: GitHub Git Graph SVG */}
+                  </div>
+
+                  {/* Right Column: GitHub Git Graph SVG */}
                   <div className="md:col-span-5 bg-black/40 rounded-xl border border-white/[0.04] p-4 flex flex-col items-center justify-center relative overflow-hidden h-[300px] select-none pointer-events-none">
                     <div className="absolute inset-0 hm-grid-pattern opacity-[0.06]" />
                     <span className="text-[8.5px] font-mono text-slate-500 uppercase tracking-widest mb-3 z-10">
                       {githubSyncOk ? "✦ PIPELINE LIVE" : "GIT REPOSITORY GRAPH"}
                     </span>
                     <svg viewBox="0 0 220 140" className="w-full max-w-[240px] z-10" xmlns="http://www.w3.org/2000/svg">
-                      {/* Grid subtle lines */}
                       <line x1="0" y1="70" x2="220" y2="70" stroke="#1e293b" strokeWidth="0.5" strokeDasharray="4,6" />
-
-                      {/* Main branch line */}
                       <line x1="15" y1="55" x2="205" y2="55"
                         stroke={githubSyncOk ? "#34d399" : "#475569"}
                         strokeWidth="1.5"
                         strokeLinecap="round"
                         style={{ transition: "stroke 0.6s" }}
                       />
-
-                      {/* Feature branch curve */}
                       <path d="M 55 55 C 75 100, 140 100, 160 55"
                         stroke="#22d3ee"
                         strokeWidth="1.2"
@@ -1461,23 +1321,16 @@ export function HarborMasterApp() {
                         strokeDasharray={githubSyncOk ? "none" : "4,3"}
                         opacity="0.8"
                       />
-
-                      {/* Animated packet on feature branch */}
                       <circle r="3" fill="#22d3ee" opacity="0.9">
                         <animateMotion dur="2.4s" repeatCount="indefinite" path="M 55 55 C 75 100, 140 100, 160 55" />
                       </circle>
-
-                      {/* Animated packet on main branch (delayed) */}
                       <circle r="2.5" fill={githubSyncOk ? "#34d399" : "#64748b"} opacity="0.85">
                         <animateMotion dur="1.8s" repeatCount="indefinite" begin="0.6s" path="M 15 55 L 205 55" />
                       </circle>
-
-                      {/* Commit nodes on main branch */}
                       <circle cx="30" cy="55" r="4" fill="#0f172a" stroke="#475569" strokeWidth="1.5" />
                       <circle cx="55" cy="55" r="4" fill="#0f172a" stroke="#22d3ee" strokeWidth="1.5" />
                       <circle cx="100" cy="55" r="4" fill="#0f172a" stroke="#475569" strokeWidth="1.5" />
                       <circle cx="140" cy="55" r="4" fill="#0f172a" stroke="#475569" strokeWidth="1.5" />
-                      {/* Merge node */}
                       <circle cx="160" cy="55" r="5"
                         fill="#0f172a"
                         stroke={githubSyncOk ? "#34d399" : "#22d3ee"}
@@ -1485,16 +1338,10 @@ export function HarborMasterApp() {
                         style={{ transition: "stroke 0.6s" }}
                       />
                       <circle cx="190" cy="55" r="4" fill="#0f172a" stroke="#475569" strokeWidth="1.5" />
-
-                      {/* Commit labels */}
                       <text x="30" y="45" textAnchor="middle" fill="#64748b" fontSize="6" fontFamily="monospace">a1b2</text>
                       <text x="55" y="45" textAnchor="middle" fill="#22d3ee" fontSize="6" fontFamily="monospace">c3f8</text>
                       <text x="160" y="45" textAnchor="middle" fill={githubSyncOk ? "#34d399" : "#22d3ee"} fontSize="6" fontFamily="monospace">MERGE</text>
-
-                      {/* Branch label */}
                       <text x="108" y="113" textAnchor="middle" fill="#22d3ee" fontSize="6.5" fontFamily="monospace" opacity="0.8">feat/oauth-fix</text>
-
-                      {/* PR badge */}
                       <rect x="72" y="118" width="76" height="14" rx="3" fill="#0f172a" stroke={githubSyncOk ? "#34d399" : "#1e3a3a"} strokeWidth="0.8" />
                       <circle cx="82" cy="125" r="2.5" fill={githubSyncOk ? "#34d399" : "#22d3ee"} opacity="0.9" />
                       <text x="88" y="128" fill={githubSyncOk ? "#34d399" : "#94a3b8"} fontSize="6" fontFamily="monospace">PR #182  open</text>
@@ -1507,8 +1354,8 @@ export function HarborMasterApp() {
               </Card>
             )}
 
-            {/* Step 2: Connect Discord */}
-            {onboardingStep === 2 && (
+            {/* Step 3: Connect Discord */}
+            {onboardingStep === 3 && (
               <Card className="border-white/[0.06] bg-[#101424]/85 backdrop-blur-md p-6 shadow-xl shadow-slate-950/40">
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
                   {/* Left Column: Form */}
@@ -1517,7 +1364,7 @@ export function HarborMasterApp() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <MessageSquare className="size-5 text-sky-300" />
-                          <CardTitle className="text-base text-white font-heading">2. Configure Discord Live Source</CardTitle>
+                          <CardTitle className="text-base text-white font-heading">3. Connect Community Channels</CardTitle>
                         </div>
                         {discordSyncOk && (
                           <Badge variant="outline" className="border-emerald-500/20 bg-emerald-500/5 text-emerald-400 text-[10px] flex items-center gap-1">
@@ -1526,7 +1373,7 @@ export function HarborMasterApp() {
                         )}
                       </div>
                       <CardDescription className="text-xs text-slate-400 leading-relaxed font-sans">
-                        Import user complaint tickets and support channels to measure community sentiment.
+                        HarborMaster uses Discord to identify recurring complaints, support trends, maintainer discussions, and release conversations.
                       </CardDescription>
 
                       <div className="space-y-3">
@@ -1548,7 +1395,7 @@ export function HarborMasterApp() {
                         Test connection
                       </Button>
                       <Button className="bg-teal-500/10 border border-teal-500/30 text-teal-300 hover:bg-teal-500/25 text-xs font-medium" onClick={handleOnboardingNext}>
-                        Next: Connect Notion
+                        Next: Connect Documentation
                       </Button>
                     </div>
                   </div>
@@ -1560,10 +1407,7 @@ export function HarborMasterApp() {
                       {discordSyncOk ? "✦ SENTIMENT LIVE" : "NLP SIGNAL ANALYSIS"}
                     </span>
                     <svg viewBox="0 0 220 120" className="w-full max-w-[240px] z-10" xmlns="http://www.w3.org/2000/svg">
-                      {/* Baseline */}
                       <line x1="10" y1="60" x2="210" y2="60" stroke="#1e293b" strokeWidth="0.8" />
-
-                      {/* Undulating sentiment wave — path animates via transform */}
                       <path
                         d="M10,60 C25,35 40,85 55,60 C70,35 85,85 100,60 C115,35 130,85 145,60 C160,35 175,85 190,60 C200,50 205,55 210,60"
                         stroke={discordSyncOk ? "#34d399" : "#22d3ee"}
@@ -1581,8 +1425,6 @@ export function HarborMasterApp() {
                           repeatCount="indefinite"
                         />
                       </path>
-
-                      {/* Dimmer echo wave */}
                       <path
                         d="M10,60 C25,42 40,78 55,60 C70,42 85,78 100,60 C115,42 130,78 145,60 C160,42 175,78 190,60 C200,53 205,57 210,60"
                         stroke="#0e7490"
@@ -1599,28 +1441,20 @@ export function HarborMasterApp() {
                           repeatCount="indefinite"
                         />
                       </path>
-
-                      {/* Message dots with sonar rings */}
                       <circle cx="55" cy="60" r="3" fill={discordSyncOk ? "#34d399" : "#22d3ee"} opacity="0.9" />
                       <circle cx="55" cy="60" r="3" fill="none" stroke={discordSyncOk ? "#34d399" : "#22d3ee"} strokeWidth="1" opacity="0">
                         <animate attributeName="r" from="3" to="12" dur="1.8s" repeatCount="indefinite" />
                         <animate attributeName="opacity" from="0.6" to="0" dur="1.8s" repeatCount="indefinite" />
                       </circle>
-
                       <circle cx="130" cy="60" r="3" fill="#7dd3fc" opacity="0.85" />
                       <circle cx="130" cy="60" r="3" fill="none" stroke="#7dd3fc" strokeWidth="1" opacity="0">
                         <animate attributeName="r" from="3" to="12" dur="1.8s" begin="0.6s" repeatCount="indefinite" />
                         <animate attributeName="opacity" from="0.6" to="0" dur="1.8s" begin="0.6s" repeatCount="indefinite" />
                       </circle>
-
-                      {/* NLP label chips */}
                       <rect x="34" y="82" width="44" height="11" rx="2.5" fill="#0c1220" stroke="#22d3ee" strokeWidth="0.6" opacity="0.9" />
                       <text x="56" y="90" textAnchor="middle" fill="#22d3ee" fontSize="5.5" fontFamily="monospace">frustration</text>
-
                       <rect x="107" y="82" width="50" height="11" rx="2.5" fill="#0c1220" stroke="#7dd3fc" strokeWidth="0.6" opacity="0.9" />
                       <text x="132" y="90" textAnchor="middle" fill="#7dd3fc" fontSize="5.5" fontFamily="monospace">#general-help</text>
-
-                      {/* Channel badge top */}
                       <rect x="68" y="10" width="84" height="14" rx="3" fill="#0f172a" stroke={discordSyncOk ? "#34d399" : "#1e3a5f"} strokeWidth="0.7" />
                       <circle cx="78" cy="17" r="2.5" fill={discordSyncOk ? "#34d399" : "#22d3ee"} opacity="0.9" />
                       <text x="84" y="20" fill={discordSyncOk ? "#34d399" : "#94a3b8"} fontSize="6" fontFamily="monospace">discord.messages</text>
@@ -1633,8 +1467,8 @@ export function HarborMasterApp() {
               </Card>
             )}
 
-            {/* Step 3: Connect Notion */}
-            {onboardingStep === 3 && (
+            {/* Step 4: Connect Notion */}
+            {onboardingStep === 4 && (
               <Card className="border-white/[0.06] bg-[#101424]/85 backdrop-blur-md p-6 shadow-xl shadow-slate-950/40">
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
                   {/* Left Column: Form */}
@@ -1642,8 +1476,8 @@ export function HarborMasterApp() {
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <Globe className="size-5 text-slate-300" />
-                          <CardTitle className="text-base text-white font-heading">3. Connect Notion Wiki Database</CardTitle>
+                          <Globe className="size-5 text-slate-350" />
+                          <CardTitle className="text-base text-white font-heading">4. Connect Documentation Workspace</CardTitle>
                         </div>
                         {notionSyncOk && (
                           <Badge variant="outline" className="border-emerald-500/20 bg-emerald-500/5 text-emerald-400 text-[10px] flex items-center gap-1">
@@ -1652,7 +1486,7 @@ export function HarborMasterApp() {
                         )}
                       </div>
                       <CardDescription className="text-xs text-slate-400 leading-relaxed font-sans">
-                        Link release design documents, product specs, and development FAQs.
+                        HarborMaster uses documentation to understand release notes, architecture decisions, project knowledge, and roadmaps.
                       </CardDescription>
 
                       <div className="space-y-3">
@@ -1665,8 +1499,8 @@ export function HarborMasterApp() {
                     </div>
 
                     <div className="pt-4 flex justify-end border-t border-white/[0.04] bg-transparent">
-                      <Button className="bg-teal-500/10 border border-teal-500/30 text-teal-300 hover:bg-teal-500/25 text-xs font-medium" onClick={handleOnboardingNext}>
-                        Next: Connect Slack Alerts
+                      <Button className="bg-teal-500/20 border border-teal-500/40 text-teal-300 hover:bg-teal-500/30 text-xs shadow-md shadow-teal-950/20 font-medium" onClick={handleOnboardingNext}>
+                        Build HarborMaster Workspace
                       </Button>
                     </div>
                   </div>
@@ -1678,28 +1512,18 @@ export function HarborMasterApp() {
                       {notionSyncOk ? "✦ DOCS INDEXED" : "DOCUMENT SCANNER"}
                     </span>
                     <svg viewBox="0 0 160 140" className="w-full max-w-[200px] z-10" xmlns="http://www.w3.org/2000/svg">
-                      {/* Document border */}
                       <rect x="18" y="8" width="124" height="124" rx="5" fill="#0b1120" stroke={notionSyncOk ? "#34d399" : "#334155"} strokeWidth="1" style={{ transition: "stroke 0.6s" }} />
-
-                      {/* Doc header bar */}
                       <rect x="18" y="8" width="124" height="18" rx="5" fill={notionSyncOk ? "#052e16" : "#111827"} style={{ transition: "fill 0.6s" }} />
                       <circle cx="30" cy="17" r="3" fill={notionSyncOk ? "#34d399" : "#475569"} style={{ transition: "fill 0.6s" }} />
                       <rect x="38" y="13" width="55" height="5" rx="2" fill="#1e293b" />
-
-                      {/* Content skeleton rows */}
                       <rect x="26" y="34" width="108" height="5" rx="2" fill="#1e293b" opacity="0.9" />
                       <rect x="26" y="44" width="88" height="5" rx="2" fill="#1e293b" opacity="0.7" />
                       <rect x="26" y="54" width="96" height="5" rx="2" fill="#1e293b" opacity="0.8" />
-
-                      {/* Section divider */}
                       <line x1="26" y1="65" x2="134" y2="65" stroke="#1e293b" strokeWidth="0.8" />
-
                       <rect x="26" y="72" width="70" height="5" rx="2" fill="#1e293b" opacity="0.9" />
                       <rect x="26" y="82" width="100" height="5" rx="2" fill="#1e293b" opacity="0.7" />
                       <rect x="26" y="92" width="82" height="5" rx="2" fill="#1e293b" opacity="0.8" />
                       <rect x="26" y="102" width="60" height="5" rx="2" fill="#1e293b" opacity="0.6" />
-
-                      {/* Vertical laser scan line */}
                       <line x1="18" y1="26" x2="142" y2="26" stroke={notionSyncOk ? "#34d399" : "#2dd4bf"} strokeWidth="1.2" opacity="0.85" style={{ transition: "stroke 0.6s" }}>
                         <animateTransform
                           attributeName="transform"
@@ -1710,7 +1534,6 @@ export function HarborMasterApp() {
                           repeatCount="indefinite"
                         />
                       </line>
-                      {/* Laser glow */}
                       <rect x="18" y="24" width="124" height="4" fill={notionSyncOk ? "#34d399" : "#2dd4bf"} opacity="0.08" style={{ transition: "fill 0.6s" }}>
                         <animateTransform
                           attributeName="transform"
@@ -1721,8 +1544,6 @@ export function HarborMasterApp() {
                           repeatCount="indefinite"
                         />
                       </rect>
-
-                      {/* Page type badge */}
                       <rect x="90" y="11" width="46" height="11" rx="2.5" fill="#0f172a" stroke={notionSyncOk ? "#34d399" : "#1e3a3a"} strokeWidth="0.6" />
                       <text x="113" y="19" textAnchor="middle" fill={notionSyncOk ? "#34d399" : "#64748b"} fontSize="5.5" fontFamily="monospace">notion.pages</text>
                     </svg>
@@ -1734,104 +1555,10 @@ export function HarborMasterApp() {
               </Card>
             )}
 
-            {/* Step 4: Connect Slack */}
-            {onboardingStep === 4 && (
-              <Card className="border-white/[0.06] bg-[#101424]/85 backdrop-blur-md p-6 shadow-xl shadow-slate-950/40">
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-                  {/* Left Column: Form */}
-                  <div className="md:col-span-7 flex flex-col justify-between space-y-4">
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Activity className="size-5 text-teal-300" />
-                          <CardTitle className="text-base text-white font-heading">4. Configure Slack Notifications</CardTitle>
-                        </div>
-                        {slackSyncOk && (
-                          <Badge variant="outline" className="border-emerald-500/20 bg-emerald-500/5 text-emerald-400 text-[10px] flex items-center gap-1">
-                            <CheckCircle2 className="size-3" /> Enabled
-                          </Badge>
-                        )}
-                      </div>
-                      <CardDescription className="text-xs text-slate-400 leading-relaxed font-sans">
-                        Send incident alerts and release watch updates to internal teams automatically.
-                      </CardDescription>
-
-                      <div className="space-y-3">
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-mono text-slate-400">SLACK WEBHOOK URL (OPTIONAL)</label>
-                          <Input placeholder="https://hooks.slack.com/services/..." value={slackWebhook} onChange={(e) => setSlackWebhook(e.target.value)} className="bg-slate-950 border-slate-900 text-xs focus-visible:ring-teal-500/20 text-white placeholder:text-slate-600" />
-                          <p className="text-[9px] text-slate-500 mt-1 leading-normal font-sans">Used to post critical alerts to your internal channels.</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="pt-4 flex justify-end border-t border-white/[0.04] bg-transparent">
-                      <Button className="bg-teal-500/20 border border-teal-500/40 text-teal-300 hover:bg-teal-500/30 text-xs shadow-md shadow-teal-950/20 font-medium" onClick={handleOnboardingNext}>
-                        Finish & Sync Workspace
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Right Column: Slack Webhook Dispatcher SVG */}
-                  <div className="md:col-span-5 bg-black/40 rounded-xl border border-white/[0.04] p-4 flex flex-col items-center justify-center relative overflow-hidden h-[300px] select-none pointer-events-none">
-                    <div className="absolute inset-0 hm-grid-pattern opacity-[0.06]" />
-                    <span className="text-[8.5px] font-mono text-slate-500 uppercase tracking-widest mb-3 z-10">
-                      {slackSyncOk ? "✦ WEBHOOK LIVE" : "ALERT DISPATCHER"}
-                    </span>
-                    <svg viewBox="0 0 220 120" className="w-full max-w-[240px] z-10" xmlns="http://www.w3.org/2000/svg">
-                      {/* Source: First Mate box */}
-                      <rect x="5" y="44" width="44" height="32" rx="4" fill="#0b1120" stroke="#2dd4bf" strokeWidth="1" />
-                      <text x="27" y="57" textAnchor="middle" fill="#2dd4bf" fontSize="5.5" fontFamily="monospace">CORAL</text>
-                      <text x="27" y="67" textAnchor="middle" fill="#2dd4bf" fontSize="5" fontFamily="monospace">ENGINE</text>
-
-                      {/* Router box center */}
-                      <rect x="82" y="38" width="56" height="44" rx="5" fill="#0f172a" stroke={slackSyncOk ? "#34d399" : "#334155"} strokeWidth="1.2" style={{ transition: "stroke 0.6s" }} />
-                      <text x="110" y="56" textAnchor="middle" fill={slackSyncOk ? "#34d399" : "#475569"} fontSize="5.5" fontFamily="monospace" style={{ transition: "fill 0.6s" }}>WEBHOOK</text>
-                      <text x="110" y="67" textAnchor="middle" fill={slackSyncOk ? "#34d399" : "#475569"} fontSize="5" fontFamily="monospace" style={{ transition: "fill 0.6s" }}>ROUTER</text>
-
-                      {/* Destination: Slack badge */}
-                      <rect x="170" y="44" width="44" height="32" rx="4" fill="#0b1120" stroke={slackSyncOk ? "#34d399" : "#1e3a3a"} strokeWidth="1" style={{ transition: "stroke 0.6s" }} />
-                      <text x="192" y="57" textAnchor="middle" fill={slackSyncOk ? "#34d399" : "#64748b"} fontSize="5.5" fontFamily="monospace" style={{ transition: "fill 0.6s" }}>SLACK</text>
-                      <text x="192" y="67" textAnchor="middle" fill={slackSyncOk ? "#34d399" : "#64748b"} fontSize="5" fontFamily="monospace" style={{ transition: "fill 0.6s" }}>API</text>
-
-                      {/* Pipeline tracks */}
-                      <line x1="49" y1="60" x2="82" y2="60" stroke="#334155" strokeWidth="1" />
-                      <line x1="138" y1="60" x2="170" y2="60" stroke="#334155" strokeWidth="1" />
-
-                      {/* Animated packet: Coral → Router */}
-                      <circle r="3" fill="#2dd4bf" opacity="0.9">
-                        <animateMotion dur="1.4s" repeatCount="indefinite" path="M 49 60 L 82 60" />
-                      </circle>
-                      {/* Animated packet: Router → Slack (delayed) */}
-                      <circle r="3" fill={slackSyncOk ? "#34d399" : "#2dd4bf"} opacity="0.9">
-                        <animateMotion dur="1.2s" begin="0.7s" repeatCount="indefinite" path="M 138 60 L 170 60" />
-                      </circle>
-
-                      {/* Alert chips above track */}
-                      <rect x="52" y="30" width="56" height="12" rx="2.5" fill="#0f172a" stroke="#f87171" strokeWidth="0.6" />
-                      <text x="80" y="39" textAnchor="middle" fill="#f87171" fontSize="5.5" fontFamily="monospace">⚠ CI FAILURE</text>
-
-                      {/* Success checkmark badge */}
-                      <circle cx="192" cy="88" r="8" fill={slackSyncOk ? "#052e16" : "#0f172a"} stroke={slackSyncOk ? "#34d399" : "#1e3a3a"} strokeWidth="1" style={{ transition: "all 0.6s" }} />
-                      <text x="192" y="92" textAnchor="middle" fill={slackSyncOk ? "#34d399" : "#334155"} fontSize="8" fontFamily="monospace" style={{ transition: "fill 0.6s" }}>✓</text>
-
-                      {/* Delivery status label */}
-                      <text x="110" y="100" textAnchor="middle" fill={slackSyncOk ? "#34d399" : "#475569"} fontSize="5.5" fontFamily="monospace" style={{ transition: "fill 0.6s" }}>
-                        {slackSyncOk ? "delivered · 0ms latency" : "awaiting webhook url"}
-                      </text>
-                    </svg>
-                    <p className="text-[9px] text-slate-500 font-sans text-center mt-2 z-10 max-w-[180px] leading-relaxed">
-                      {slackSyncOk ? "Alert dispatch active. Routing to workspace." : "Paste a webhook URL to activate dispatch pipeline."}
-                    </p>
-                  </div>
-                </div>
-              </Card>
-            )}
-
             {/* Step 5: Sync Workspace Animation */}
             {onboardingStep === 5 && (
               <Card className="border-white/[0.06] bg-[#101424]/85 backdrop-blur-md p-6 md:p-8 text-center space-y-6 shadow-xl shadow-slate-950/40 w-full max-w-2xl mx-auto">
-                {/* 4-Port Converging Core Reactor SVG */}
+                {/* 3-Port Converging Core Reactor SVG */}
                 <div className="relative w-full flex items-center justify-center overflow-hidden rounded-xl border border-white/[0.02] bg-slate-950/20 select-none pointer-events-none py-2">
                   <div className="absolute inset-0 hm-grid-pattern opacity-[0.06]" />
                   <svg viewBox="0 0 280 160" className="w-full max-w-[340px] z-10" xmlns="http://www.w3.org/2000/svg">
@@ -1846,7 +1573,7 @@ export function HarborMasterApp() {
                     </circle>
                     <text x="140" y="84" textAnchor="middle" fill="#2dd4bf" fontSize="7" fontFamily="monospace" fontWeight="bold">CORAL</text>
 
-                    {/* Conduit lines: each lights up at 25% increments */}
+                    {/* Conduit lines */}
                     {/* Left: GitHub → core */}
                     <line x1="24" y1="80" x2="122" y2="80"
                       stroke={syncProgress >= 25 ? "#3b82f6" : "#1e293b"}
@@ -1883,18 +1610,6 @@ export function HarborMasterApp() {
                       </circle>
                     )}
 
-                    {/* Bottom: Slack → core */}
-                    <line x1="140" y1="98" x2="140" y2="146"
-                      stroke={syncProgress >= 90 ? "#2dd4bf" : "#1e293b"}
-                      strokeWidth="1.5" strokeDasharray={syncProgress >= 90 ? "none" : "4,4"}
-                      style={{ transition: "stroke 0.5s" }}
-                    />
-                    {syncProgress >= 90 && (
-                      <circle r="3" fill="#2dd4bf" opacity="0.9">
-                        <animateMotion dur="1.0s" repeatCount="indefinite" path="M 140 146 L 140 98" />
-                      </circle>
-                    )}
-
                     {/* Source nodes */}
                     {/* GitHub — Left */}
                     <rect x="4" y="66" width="20" height="28" rx="4" fill="#0b1120" stroke={syncProgress >= 25 ? "#3b82f6" : "#1e293b"} strokeWidth="1" style={{ transition: "stroke 0.5s" }} />
@@ -1911,11 +1626,6 @@ export function HarborMasterApp() {
                     <text x="266" y="77" textAnchor="middle" fill={syncProgress >= 75 ? "#94a3b8" : "#334155"} fontSize="4.5" fontFamily="monospace" style={{ transition: "fill 0.5s" }}>NTN</text>
                     <text x="266" y="86" textAnchor="middle" fill={syncProgress >= 75 ? "#94a3b8" : "#334155"} fontSize="4" fontFamily="monospace" style={{ transition: "fill 0.5s" }}>docs</text>
 
-                    {/* Slack — Bottom */}
-                    <rect x="126" y="138" width="28" height="20" rx="4" fill="#0b1120" stroke={syncProgress >= 90 ? "#2dd4bf" : "#1e293b"} strokeWidth="1" style={{ transition: "stroke 0.5s" }} />
-                    <text x="140" y="148" textAnchor="middle" fill={syncProgress >= 90 ? "#2dd4bf" : "#334155"} fontSize="4.5" fontFamily="monospace" style={{ transition: "fill 0.5s" }}>SLCK</text>
-                    <text x="140" y="155" textAnchor="middle" fill={syncProgress >= 90 ? "#2dd4bf" : "#334155"} fontSize="4" fontFamily="monospace" style={{ transition: "fill 0.5s" }}>hooks</text>
-
                     {/* Sync % arc label */}
                     <text x="140" y="80" dy="4" textAnchor="middle" fill={syncProgress === 100 ? "#34d399" : "#2dd4bf"} fontSize="5.5" fontFamily="monospace" fontWeight="bold" style={{ transition: "fill 0.5s" }}>
                       {syncProgress}%
@@ -1924,9 +1634,9 @@ export function HarborMasterApp() {
                 </div>
 
                 <div className="space-y-2">
-                  <h3 className="text-base font-semibold text-white font-heading">Syncing Workspace Schemas...</h3>
+                  <h3 className="text-base font-semibold text-white font-heading">Building Your Workspace...</h3>
                   <p className="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed font-sans">
-                    Coral SQL is loading tables, indexing Linear keys, and joining community feedback with git commits.
+                    Coral SQL is loading repositories, scanning Discord community channels, and indexing Notion documentation.
                   </p>
                 </div>
 
@@ -1952,7 +1662,7 @@ export function HarborMasterApp() {
                     <div className="h-full bg-teal-400 transition-all duration-200" style={{ width: `${syncProgress}%` }} />
                   </div>
                   <div className="flex justify-between font-mono text-[9px] text-slate-500">
-                    <span>INDEXING DATABASES</span>
+                    <span>BUILDING WORKSPACE</span>
                     <span>{syncProgress}%</span>
                   </div>
                 </div>
@@ -2034,8 +1744,7 @@ export function HarborMasterApp() {
                   {[
                     { name: "GitHub", connected: !!githubToken || brief.mode === "coral-live" || brief.mode === "demo-preview" },
                     { name: "Discord", connected: !!discordToken || brief.mode === "coral-live" || brief.mode === "demo-preview" },
-                    { name: "Linear", connected: brief.mode === "coral-live" || brief.mode === "demo-preview" || !!geminiKey },
-                    { name: "Slack", connected: !!slackWebhook || brief.mode === "coral-live" || brief.mode === "demo-preview" },
+                    { name: "Notion", connected: !!notionToken || brief.mode === "coral-live" || brief.mode === "demo-preview" },
                   ].map((src) => (
                     <div key={src.name} className="flex items-center justify-between text-[10.5px]">
                       <div className="flex items-center gap-2 text-slate-400">
@@ -2127,7 +1836,7 @@ export function HarborMasterApp() {
                       Draft First Mate Action
                     </CardTitle>
                     <CardDescription className="text-xs text-slate-400">
-                      Verify response before sending comment to {actionType === "discord" ? "Discord channel" : actionType === "slack" ? "Slack workspace" : actionType === "github" ? "GitHub pull request" : "Linear board"}.
+                      Verify response before sending comment to {actionType === "discord" ? "Discord channel" : actionType === "github" ? "GitHub pull request" : "Notion page"}.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4 pt-4">
@@ -2333,8 +2042,8 @@ export function HarborMasterApp() {
 
                               <div className="flex gap-2">
                                 {action.category === "Fix" && (
-                                  <Button size="sm" className="h-7 text-[10px] bg-slate-950 border border-slate-850 hover:bg-slate-900 text-teal-400 font-medium" onClick={() => handleOpenAction(action, "slack")}>
-                                    Draft Slack Alert
+                                  <Button size="sm" className="h-7 text-[10px] bg-slate-950 border border-slate-850 hover:bg-slate-900 text-teal-400 font-medium" onClick={() => handleOpenAction(action, "github")}>
+                                    Draft Git Review
                                   </Button>
                                 )}
                                 {action.category === "Review" && (
@@ -2348,8 +2057,8 @@ export function HarborMasterApp() {
                                   </Button>
                                 )}
                                 {action.category === "Ship" && (
-                                  <Button size="sm" className="h-7 text-[10px] bg-slate-950 border border-slate-850 hover:bg-slate-900 text-violet-400 font-medium" onClick={() => handleOpenAction(action, "linear")}>
-                                    Update Linear
+                                  <Button size="sm" className="h-7 text-[10px] bg-slate-950 border border-slate-850 hover:bg-slate-900 text-violet-400 font-medium" onClick={() => handleOpenAction(action, "notion")}>
+                                    Update Notion
                                   </Button>
                                 )}
                               </div>
@@ -2383,10 +2092,10 @@ export function HarborMasterApp() {
 
                       <div className="space-y-8 relative">
                         {[
-                          { title: "Authentication Flow Blocker", status: "BLOCKED", source: "Linear", desc: "Issue LIN-421: OAuth retry count exhaustion fails to catch silent timeouts.", time: "2 hours ago", type: "error" },
+                          { title: "Authentication Flow Blocker", status: "BLOCKED", source: "GitHub", desc: "Issue #184: OAuth retry count exhaustion fails to catch silent timeouts.", time: "2 hours ago", type: "error" },
                           { title: "PR #184 CI Compilation", status: "FAILING", source: "GitHub", desc: "Build action check failed on verify-deployment check in nextjs-turbopack bundle.", time: "4 hours ago", type: "error" },
                           { title: "Documentation updates verification", status: "PENDING", source: "Notion", desc: "Wiki sync lists 4 release FAQ paragraphs needing updates before publish.", time: "Yesterday", type: "warning" },
-                          { title: "QA Testing Verification", status: "SUCCESS", source: "Slack", desc: "Internal engineers signed off on manual staging regression checks.", time: "2 days ago", type: "success" }
+                          { title: "Community Signoff Verification", status: "SUCCESS", source: "Discord", desc: "Maintainers on #dev channel approved the staging deployment tests.", time: "2 days ago", type: "success" }
                         ].map((node, i) => (
                           <div key={i} className="flex gap-6 items-start">
                             {/* Circle bullet node */}
@@ -2416,7 +2125,7 @@ export function HarborMasterApp() {
                               </div>
                               <p className="text-[11px] text-slate-400 leading-relaxed">{node.desc}</p>
                               <div className="flex items-center gap-1.5 mt-1">
-                                <span className="text-[9px] text-slate-505 font-mono font-sans">Source:</span>
+                                <span className="text-[9px] text-slate-550 font-mono font-sans">Source:</span>
                                 <Badge variant="outline" className={cn("text-[8px] font-mono py-0 px-1.5 h-4.5", sourceTone[node.source] || "border-slate-800 text-slate-500")}>
                                   {node.source}
                                 </Badge>
@@ -2441,7 +2150,7 @@ export function HarborMasterApp() {
                       {[
                         { title: "OAuth Timeout Issues", count: 8, source: "Discord", sentiment: "Negative", excerpt: "Users reporting 'Token expired' redirect loops immediately after auth click." },
                         { title: "PR #184 CI pipeline failures", count: 4, source: "GitHub Comments", sentiment: "Warning", excerpt: "CI failed on verify-deployment task in next-turbopack check." },
-                        { title: "Linear Sync Delays", count: 2, source: "Slack Alert", sentiment: "Neutral", excerpt: "Board syncing delays reported between org workspace and client." },
+                        { title: "Notion Roadmap Updates", count: 2, source: "Notion", sentiment: "Neutral", excerpt: "FAQ roadmap docs sync completed successfully with 2 pending edits." },
                       ].map((item, i) => (
                         <Card key={i} className="border-white/[0.04] bg-[#0E1326]/40 backdrop-blur-md p-4 space-y-3">
                           <div className="flex justify-between items-center">
