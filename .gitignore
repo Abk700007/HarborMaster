@@ -50,3 +50,10 @@ harbormaster.config.json
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local developer agent checklists & documentation
+/task.md
+/AGENTS.md
+/CLAUDE.md
+/walkthrough.md
+
